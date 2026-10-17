@@ -116,12 +116,17 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [showJoinCodeModal, setShowJoinCodeModal] = useState(false)
   const [showNewDMModal, setShowNewDMModal] = useState(false)
+  const [dmSearchQuery, setDmSearchQuery] = useState('')
+  const [directRecipientInput, setDirectRecipientInput] = useState('')
   const [toast, setToast] = useState<string | null>(null)
 
   // WebSocket State
   const wsRef = useRef<WebSocket | null>(null)
   const [wsConnected, setWsConnected] = useState(false)
-  const [currentUser, setCurrentUser] = useState({ id: 7, name: 'Peter Chijioke' })
+  const [currentUser, setCurrentUser] = useState(() => {
+    const local = typeof window !== 'undefined' ? getUserProfile() : null
+    return { id: 0, name: local?.name || 'Student' }
+  })
 
   const showToastMsg = (msg: string) => {
     setToast(msg)
@@ -165,7 +170,7 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
         }
       } catch (e) {
         const local = getUserProfile()
-        if (local) setCurrentUser({ id: 7, name: local.name })
+        if (local) setCurrentUser({ id: 0, name: local.name })
       }
 
       // 3. Load groups from PostgreSQL database
@@ -180,10 +185,7 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
             memberCount: 1,
             description: g.description || 'Class discussion room',
             inviteCode: `CR-${g.id}`,
-            members: [
-              { name: 'Daniel Chukwu', role: 'Course Representative', avatar: 'DC' },
-              { name: 'Peter Chijioke (You)', role: 'Student', avatar: 'PC' },
-            ],
+            members: [],
           }))
           setChannels(mapped)
           if (!activeGroupId && mapped[0]) {
@@ -194,23 +196,36 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
         console.warn('Failed to load chat groups from API:', err)
       }
 
-      // 4. Default contacts list
-      const defaultContacts: DirectContact[] = [
-        {
-          id: 'dm-8',
-          name: 'Daniel Chukwu',
-          role: 'Course Representative (400L)',
-          department: 'Computer Science',
-          level: '400L',
-          online: true,
-          avatar: 'DC',
-          lastMessage: 'Tap to chat with your course representative',
-          time: 'Active now',
-        },
-      ]
-      setContacts(defaultContacts)
-      if (!activeContactId) {
-        setActiveContactId(defaultContacts[0].id)
+      // 4. Load real contacts from PostgreSQL database
+      try {
+        const liveContacts = await api.chat.getContacts()
+        if (Array.isArray(liveContacts) && liveContacts.length > 0) {
+          const mappedContacts: DirectContact[] = liveContacts.map((c) => ({
+            id: `dm-${c.id}`,
+            name: c.full_name,
+            role: `${c.role}${c.academic_level ? ` · ${c.academic_level}` : ''}`,
+            department: c.department || 'Computer Science',
+            level: c.academic_level || '400L',
+            online: true,
+            avatar: c.full_name
+              .split(' ')
+              .map((n) => n[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase() || 'ST',
+            lastMessage: 'Tap to start direct conversation',
+            time: 'Registered',
+          }))
+          setContacts(mappedContacts)
+          if (!activeContactId && mappedContacts[0]) {
+            setActiveContactId(mappedContacts[0].id)
+          }
+        } else {
+          setContacts([])
+        }
+      } catch (err) {
+        console.warn('Failed to load contacts from API:', err)
+        setContacts([])
       }
 
       // 5. Connect WebSocket with verified token
@@ -1173,12 +1188,12 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
           role="presentation"
           onMouseDown={(e) => e.target === e.currentTarget && setShowNewDMModal(false)}
         >
-          <div className="event-dialog" style={{ width: 'min(100%, 460px)' }}>
+          <div className="event-dialog" style={{ width: 'min(100%, 480px)' }}>
             <div className="dialog-header">
               <div>
                 <p className="eyebrow">Direct Message</p>
                 <h2>Select Classmate or Course Rep</h2>
-                <p>Choose an enrolled peer from your 400L Computer Science cohort.</p>
+                <p>Choose an enrolled peer from your cohort to start a real-time chat.</p>
               </div>
               <button
                 type="button"
@@ -1189,78 +1204,118 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
-              {[
-                {
-                  id: 'dm-1',
-                  name: 'Daniel Chukwu',
-                  role: 'Course Representative · 400L',
-                  department: 'Computer Science',
-                  level: '400L',
-                  online: true,
-                  avatar: 'DC',
-                  lastMessage: 'Tap to chat with Class Rep',
-                  time: 'Active',
-                },
-                {
-                  id: 'dm-2',
-                  name: 'Amaka Nwosu',
-                  role: 'Student · 400L',
-                  department: 'Computer Science',
-                  level: '400L',
-                  online: true,
-                  avatar: 'AN',
-                  lastMessage: 'Tap to chat with Amaka',
-                  time: 'Active',
-                },
-                {
-                  id: 'dm-3',
-                  name: 'Mariam Yusuf',
-                  role: 'Student · 400L',
-                  department: 'Computer Science',
-                  level: '400L',
-                  online: false,
-                  avatar: 'MY',
-                  lastMessage: 'Tap to chat with Mariam',
-                  time: 'Offline',
-                },
-                {
-                  id: 'dm-4',
-                  name: 'David Obi',
-                  role: 'Marketplace Seller & Classmate',
-                  department: 'Computer Science',
-                  level: '400L',
-                  online: true,
-                  avatar: 'DO',
-                  lastMessage: 'Tap to chat with David',
-                  time: 'Active',
-                },
-                {
-                  id: 'dm-5',
-                  name: 'Chinonso Eze',
-                  role: 'Student · 400L',
-                  department: 'Computer Science',
-                  level: '400L',
-                  online: true,
-                  avatar: 'CE',
-                  lastMessage: 'Start new message',
-                  time: 'Active',
-                },
-              ].map((c) => (
+            {/* Live Search Input */}
+            <div style={{ position: 'relative', margin: '6px 0 12px' }}>
+              <Search style={{ position: 'absolute', left: '12px', top: '10px', width: '15px', height: '15px', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Search registered peers by name or role..."
+                value={dmSearchQuery}
+                onChange={(e) => setDmSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px 9px 36px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--card)',
+                  color: 'inherit',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
+              {contacts.filter((c) =>
+                dmSearchQuery.trim() === '' ||
+                c.name.toLowerCase().includes(dmSearchQuery.toLowerCase()) ||
+                c.role.toLowerCase().includes(dmSearchQuery.toLowerCase())
+              ).length === 0 ? (
+                <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '10px', border: '1px dashed var(--border)' }}>
+                  <UserPlus style={{ width: '28px', height: '28px', margin: '0 auto 8px', opacity: 0.6 }} />
+                  <p style={{ margin: '0 0 6px', fontWeight: 600, color: 'var(--foreground)' }}>
+                    {dmSearchQuery ? `No registered peers matching "${dmSearchQuery}"` : 'No registered peers yet'}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '12px' }}>
+                    Enter their registered email or student ID below to initiate a private direct message.
+                  </p>
+                </div>
+              ) : (
+                contacts
+                  .filter((c) =>
+                    dmSearchQuery.trim() === '' ||
+                    c.name.toLowerCase().includes(dmSearchQuery.toLowerCase()) ||
+                    c.role.toLowerCase().includes(dmSearchQuery.toLowerCase())
+                  )
+                  .map((c) => (
+                    <button
+                      type="button"
+                      key={c.id}
+                      onClick={() => handleStartDM(c)}
+                      className="dm-peer-card"
+                    >
+                      <span className="avatar avatar-small">{c.avatar}</span>
+                      <div className="dm-peer-info">
+                        <strong>{c.name}</strong>
+                        <small>{c.role}</small>
+                      </div>
+                      <ChevronRight className="dm-peer-chevron" />
+                    </button>
+                  ))
+              )}
+            </div>
+
+            {/* Direct Connect by ID or Email */}
+            <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                Or message by classmate email or ID:
+              </label>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  if (!directRecipientInput.trim()) return
+                  const input = directRecipientInput.trim()
+                  const idNum = parseInt(input.replace(/\D/g, '')) || Date.now()
+                  const newContact: DirectContact = {
+                    id: `dm-${idNum}`,
+                    name: input.includes('@') ? input.split('@')[0] : `Peer #${input}`,
+                    role: 'Student',
+                    department: 'Computer Science',
+                    level: '400L',
+                    online: true,
+                    avatar: input.slice(0, 2).toUpperCase(),
+                    lastMessage: 'Direct conversation started',
+                    time: 'Active now',
+                  }
+                  handleStartDM(newContact)
+                  setDirectRecipientInput('')
+                }}
+                style={{ display: 'flex', gap: '8px' }}
+              >
+                <input
+                  type="text"
+                  placeholder="e.g. peer@university.edu or student ID"
+                  value={directRecipientInput}
+                  onChange={(e) => setDirectRecipientInput(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--card)',
+                    color: 'inherit',
+                    fontSize: '12px',
+                    outline: 'none',
+                  }}
+                />
                 <button
-                  type="button"
-                  key={c.id}
-                  onClick={() => handleStartDM(c)}
-                  className="dm-peer-card"
+                  type="submit"
+                  className="primary-button"
+                  style={{ fontSize: '12px', padding: '8px 14px' }}
                 >
-                  <span className="avatar avatar-small">{c.avatar}</span>
-                  <div className="dm-peer-info">
-                    <strong>{c.name}</strong>
-                    <small>{c.role}</small>
-                  </div>
-                  <ChevronRight className="dm-peer-chevron" />
+                  Start Chat
                 </button>
-              ))}
+              </form>
             </div>
           </div>
         </div>

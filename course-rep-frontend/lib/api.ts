@@ -174,6 +174,16 @@ export interface ChatMessage {
   created_at: string
 }
 
+export interface ChatContact {
+  id: number
+  full_name: string
+  email: string
+  role: string
+  department?: string
+  academic_level?: string
+  avatar?: string
+}
+
 export interface AcademicRecord {
   id: number
   user_id: number
@@ -319,6 +329,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(dto),
       }),
+    getContacts: (query?: string) =>
+      apiRequest<ChatContact[]>(`/chat/contacts${query ? `?q=${encodeURIComponent(query)}` : ''}`),
   },
   atlas: {
     getRecord: () => apiRequest<AcademicRecord>('/atlas/record'),

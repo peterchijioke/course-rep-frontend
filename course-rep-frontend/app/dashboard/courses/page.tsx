@@ -2112,63 +2112,80 @@ export default function CoursesPage() {
                   Recommended curriculum courses for <strong>{selectedLevel} · {selectedSemester}</strong>:
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '420px', overflowY: 'auto' }}>
-                  {availableCatalogCourses
-                    .filter((c) => {
-                      // Prioritize courses matching this level, or show others
-                      if (c.level && c.level === selectedLevel) return true
-                      return true
-                    })
-                    .map((item) => {
-                      const isAlreadyEnrolled = courseList.some((c) => c.code === item.code)
-                      return (
-                        <div
-                          key={item.code}
-                          style={{
-                            padding: '12px 14px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)',
-                            background: 'var(--card)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '12px',
-                          }}
-                        >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <strong style={{ fontSize: '13px', color: 'var(--foreground)' }}>{item.code}</strong>
-                              <span className="course-unit-pill">{item.units || 3} Units</span>
-                              <span className={`course-category-pill ${item.category === 'Elective' ? 'elective' : 'core'}`}>
-                                {item.category || 'Core'}
-                              </span>
-                              <span style={{ fontSize: '10px', color: '#64748b' }}>
-                                {item.level || selectedLevel} · {item.semester || selectedSemester}
-                              </span>
+                  {availableCatalogCourses.length === 0 ? (
+                    <div style={{ padding: '36px 16px', textAlign: 'center', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+                      <BookOpen style={{ width: '28px', height: '28px', color: '#6366f1', margin: '0 auto 10px', opacity: 0.8 }} />
+                      <h4 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 600 }}>No Pre-seeded Courses</h4>
+                      <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--muted-foreground)', maxWidth: '360px', marginLeft: 'auto', marginRight: 'auto' }}>
+                        No mock or pre-loaded courses exist for {selectedLevel}. You can register any real course using the custom course form.
+                      </p>
+                      <button
+                        type="button"
+                        className="primary-button"
+                        onClick={() => setJoinTab('custom')}
+                        style={{ fontSize: '12px', padding: '7px 16px' }}
+                      >
+                        <Plus style={{ width: '13px', marginRight: '6px' }} /> Open Custom Course Form
+                      </button>
+                    </div>
+                  ) : (
+                    availableCatalogCourses
+                      .filter((c) => {
+                        if (c.level && c.level === selectedLevel) return true
+                        return true
+                      })
+                      .map((item) => {
+                        const isAlreadyEnrolled = courseList.some((c) => c.code === item.code)
+                        return (
+                          <div
+                            key={item.code}
+                            style={{
+                              padding: '12px 14px',
+                              borderRadius: '10px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--card)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <strong style={{ fontSize: '13px', color: 'var(--foreground)' }}>{item.code}</strong>
+                                <span className="course-unit-pill">{item.units || 3} Units</span>
+                                <span className={`course-category-pill ${item.category === 'Elective' ? 'elective' : 'core'}`}>
+                                  {item.category || 'Core'}
+                                </span>
+                                <span style={{ fontSize: '10px', color: '#64748b' }}>
+                                  {item.level || selectedLevel} · {item.semester || selectedSemester}
+                                </span>
+                              </div>
+                              <h4 style={{ margin: '4px 0 2px', fontSize: '13px', fontWeight: 600 }}>{item.name}</h4>
+                              <p style={{ margin: 0, fontSize: '11px', color: 'var(--muted-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                Lecturer: {item.lecturer?.name || 'Faculty Staff'} &bull; Venue: {item.schedule?.venue || 'Lecture Hall'}
+                              </p>
                             </div>
-                            <h4 style={{ margin: '4px 0 2px', fontSize: '13px', fontWeight: 600 }}>{item.name}</h4>
-                            <p style={{ margin: 0, fontSize: '11px', color: 'var(--muted-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              Lecturer: {item.lecturer?.name || 'Faculty Staff'} &bull; Venue: {item.schedule?.venue || 'Lecture Hall'}
-                            </p>
+                            <div>
+                              {isAlreadyEnrolled ? (
+                                <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <Check style={{ width: '13px' }} /> Enrolled
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="primary-button"
+                                  onClick={() => handleJoinCatalogCourse(item)}
+                                  style={{ fontSize: '11px', padding: '6px 12px' }}
+                                >
+                                  Enroll in {selectedLevel}
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            {isAlreadyEnrolled ? (
-                              <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <Check style={{ width: '13px' }} /> Enrolled
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                className="primary-button"
-                                onClick={() => handleJoinCatalogCourse(item)}
-                                style={{ fontSize: '11px', padding: '6px 12px' }}
-                              >
-                                Enroll in {selectedLevel}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
+                        )
+                      })
+                  )}
                 </div>
               </div>
             ) : (
