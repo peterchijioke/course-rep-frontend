@@ -230,12 +230,51 @@ export default function ProfessorAtlasPage() {
     setMounted(true)
     setProfile(getUserProfile())
     setHistory(getAcademicHistory())
-    setEnrolledCourses(getEnrolledCourses())
 
+    // 1. Fetch user profile from backend
+    api.auth.me().then((u: any) => {
+      const user = u?.data || u
+      if (user && user.full_name) {
+        setProfile((prev) => ({
+          ...prev,
+          name: user.full_name,
+          department: user.department || prev.department,
+          level: user.academic_level || prev.level,
+        }))
+      }
+    }).catch(() => {})
+
+    // 2. Fetch academic record from backend
     api.atlas.getRecord().then((res: any) => {
       const rec = res?.data || res
       if (rec && (rec.cgpa !== undefined || rec.completed_credits !== undefined)) {
         setBackendRecord(rec)
+      }
+    }).catch(() => {})
+
+    // 3. Fetch enrolled courses from backend
+    api.courses.getMyEnrolled().then((cList: any) => {
+      const cl = Array.isArray(cList) ? cList : cList?.data
+      if (Array.isArray(cl)) {
+        setEnrolledCourses(cl)
+      } else {
+        setEnrolledCourses(getEnrolledCourses())
+      }
+    }).catch(() => {
+      setEnrolledCourses(getEnrolledCourses())
+    })
+
+    // 4. Fetch persistent conversation history from backend
+    api.atlas.getHistory().then((historyList: any) => {
+      const list = Array.isArray(historyList) ? historyList : historyList?.data
+      if (Array.isArray(list) && list.length > 0) {
+        const formatted: ChatMessage[] = list.map((m: any) => ({
+          id: `atlas-msg-${m.id}`,
+          sender: m.sender === 'student' ? 'student' : 'atlas',
+          text: m.content,
+          timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }))
+        setMessages(formatted)
       }
     }).catch(() => {})
 
@@ -359,194 +398,7 @@ export default function ProfessorAtlasPage() {
     }
   }, [mounted, backendRecord, history, enrolledCourses, profile])
 
-  // Intelligent Contextual Responses Engine
-  const generateAtlasResponse = (query: string): ChatMessage => {
-    const q = query.toLowerCase()
-    const { currentCGPA, unitsEarned, unitsRequired, remainingUnits, registeredUnits, courses } = auditComputation
-    const highestRisk = courses.find((c) => c.trajectory === 'Highest Risk') || courses[0]
-
-    if (q.includes('exam score') || q.includes('need for an a') || q.includes('minimum exam') || q.includes('get an a')) {
-      return {
-        id: `atlas-${Date.now()}`,
-        sender: 'atlas',
-        text: `Under the NUC 30:70 grading system, achieving an 'A' requires a cumulative score of 70% or higher. Based on your continuous assessment marks, here are the exact minimum scores out of 70 required in your semester examinations:`,
-        timestamp: 'Just now',
-        highlightCard: {
-          title: 'Minimum Exam Scores for Grade "A" (70+ Total)',
-          stats: courses.map((c) => ({
-            label: `${c.code} (${c.caScore}/30 CA)`,
-            value: `Need ${c.minExamForA} / 70`,
-            tone: c.minExamForA >= 48 ? 'urgent' : c.minExamForA <= 44 ? 'success' : 'primary',
-          })),
-          note: highestRisk ? `Priority Focus: ${highestRisk.code} demands your highest exam performance (${highestRisk.minExamForA}/70).` : undefined,
-        },
-        suggestions: [
-          { label: "⚠️ Analyze my biggest grade risk", prompt: "Which of my courses poses the highest grade risk this semester, and what is your strategic recommendation?" },
-          { label: "📈 How to reach First Class?", prompt: "Show me the exact mathematical path and semester GPA required across my remaining units to graduate with First Class Honours." },
-          { label: "🗓️ Weighted revision schedule", prompt: "Generate a weekly exam preparation and revision schedule weighted by each course's credit units and CA gaps." },
-        ],
-      }
-    }
-
-    if (q.includes('risk') || q.includes('weak') || q.includes('bottleneck') || q.includes('prioritize') || q.includes('focus')) {
-      if (!highestRisk) {
-        return {
-          id: `atlas-${Date.now()}`,
-          sender: 'atlas',
-          text: `You currently do not have any registered courses with continuous assessment (CA) scores. Please head over to **Courses** to register your semester courses or enter your marks in **Academic Records** to enable bottleneck analysis.`,
-          timestamp: 'Just now',
-          suggestions: [
-            { label: "📚 Go to Course Catalog", prompt: "How do I register for my courses?" },
-            { label: "📈 Academic standing", prompt: "Show my overall CGPA standing." },
-          ],
-        }
-      }
-
-      const riskCourse = highestRisk
-
-      return {
-        id: `atlas-${Date.now()}`,
-        sender: 'atlas',
-        text: `Based on your course weights and CA scores, **${riskCourse.code} (${riskCourse.name})** represents your primary academic bottleneck this semester. You hold ${riskCourse.caScore}/30 in CA, which means you need at least ${riskCourse.minExamForA}/70 in the examination to protect your Grade 'A'.`,
-        timestamp: 'Just now',
-        highlightCard: {
-          title: `Action Plan for ${riskCourse.code} (${riskCourse.units} Units)`,
-          stats: [
-            { label: 'Current CA', value: `${riskCourse.caScore} / 30`, tone: 'urgent' },
-            { label: 'Exam Target', value: `${riskCourse.minExamForA} / 70 for 'A'`, tone: 'primary' },
-            { label: 'Exam Safe Pass', value: `23 / 70 for 'C'`, tone: 'success' },
-            { label: 'Credit Multiplier', value: `${riskCourse.units} Units (${riskCourse.units * 5} QP at 'A')` },
-          ],
-          note: `Dedicate at least 35% of your weekly study hours to ${riskCourse.code} past exam papers and tutorial questions.`,
-        },
-        suggestions: [
-          { label: "🗓️ Generate revision plan", prompt: "Generate a weekly exam preparation and revision schedule weighted by each course's credit units and CA gaps." },
-          { label: "💡 What if I get a 'B' in this course?", prompt: "Simulate my cumulative CGPA if I achieve straight Grade B's (4.00 SGPA) this semester." },
-          { label: "🎯 View exam targets for all courses", prompt: "Break down the exact minimum exam marks I need out of 70 for each of my registered courses to secure Grade A." },
-        ],
-      }
-    }
-
-    if (q.includes('first class') || q.includes('cgpa') || q.includes('honours') || q.includes('graduate')) {
-      const currentPts = history.overallPoints
-      const totalUnits = unitsEarned + registeredUnits
-      if (totalUnits === 0) {
-        return {
-          id: `atlas-${Date.now()}`,
-          sender: 'atlas',
-          text: `Your academic profile currently shows 0 completed credits and 0 registered courses. To calculate your mathematical path to First Class Honours (4.50+), please enroll in your semester courses in **Courses** or record your semester results in **Academic Records**.`,
-          timestamp: 'Just now',
-          suggestions: DEFAULT_SUGGESTIONS.slice(0, 3),
-        }
-      }
-
-      const projectedPoints4As = currentPts + registeredUnits * 5
-      const projectedCGPA4As = (projectedPoints4As / totalUnits).toFixed(2)
-
-      return {
-        id: `atlas-${Date.now()}`,
-        sender: 'atlas',
-        text: `Your current CGPA is **${currentCGPA} / 5.00** across ${unitsEarned} credit units. The NUC First Class cutoff is **4.50**. Here is your exact mathematical roadmap:`,
-        timestamp: 'Just now',
-        highlightCard: {
-          title: 'First Class Honours Mathematical Roadmap',
-          stats: [
-            { label: 'Current CGPA', value: `${currentCGPA} (2:1)`, tone: 'primary' },
-            { label: 'Projected SGPA (Straight As)', value: '5.00 SGPA (60 QP)', tone: 'success' },
-            { label: 'CGPA after this semester', value: `${projectedCGPA4As} / 5.00`, tone: 'success' },
-            { label: 'Remaining Credits', value: `${remainingUnits} Units to graduation` },
-          ],
-          note: `If you secure straight 'A's in your current ${registeredUnits} registered units, your CGPA jumps to ${projectedCGPA4As}. A repeat performance in second semester will graduate you with First Class Honours!`,
-        },
-        suggestions: [
-          { label: "🎯 Show minimum exam marks for all courses", prompt: "Break down the exact minimum exam marks I need out of 70 for each of my registered courses to secure Grade A." },
-          { label: "💡 What if I achieve straight B's?", prompt: "Simulate my cumulative CGPA if I achieve straight Grade B's (4.00 SGPA) this semester." },
-          { label: "⚠️ Identify my highest risk course", prompt: "Which of my courses poses the highest grade risk this semester, and what is your strategic recommendation?" },
-        ],
-      }
-    }
-
-    if (q.includes('schedule') || q.includes('plan') || q.includes('revision') || q.includes('study')) {
-      if (courses.length === 0) {
-        return {
-          id: `atlas-${Date.now()}`,
-          sender: 'atlas',
-          text: `You do not have any courses enrolled for this semester yet. Once you enroll in your courses in **Courses**, I will generate an optimized weekly study timetable tailored to your credit units and assessment deadlines.`,
-          timestamp: 'Just now',
-          suggestions: DEFAULT_SUGGESTIONS.slice(0, 3),
-        }
-      }
-
-      return {
-        id: `atlas-${Date.now()}`,
-        sender: 'atlas',
-        text: `Here is an optimized weekly study and revision timetable weighted by your registered course credit units and continuous assessment risk:`,
-        timestamp: 'Just now',
-        highlightCard: {
-          title: 'Credit-Weighted Weekly Study Allocation',
-          stats: courses.map((c) => ({
-            label: `${c.code} (${c.units} Units)`,
-            value: c.trajectory === 'Highest Risk' ? '6.5 hrs/week (Priority)' : '4.5 hrs/week',
-            tone: c.trajectory === 'Highest Risk' ? 'urgent' : 'primary',
-          })),
-          note: 'Allocates maximum cognitive energy to high-risk courses during peak morning study blocks.',
-        },
-        suggestions: [
-          { label: "🎯 Check exam targets for 'A'", prompt: "Break down the exact minimum exam marks I need out of 70 for each of my registered courses to secure Grade A." },
-          { label: "📈 How to reach First Class?", prompt: "Show me the exact mathematical path and semester GPA required across my remaining units to graduate with First Class Honours." },
-        ],
-      }
-    }
-
-    if (q.includes('b') || q.includes('simulate') || q.includes('worst') || q.includes('scenario')) {
-      const totalUnits = unitsEarned + registeredUnits
-      if (totalUnits === 0) {
-        return {
-          id: `atlas-${Date.now()}`,
-          sender: 'atlas',
-          text: `Simulation requires registered courses or transcript units. Please enroll in your courses first in **Courses**.`,
-          timestamp: 'Just now',
-          suggestions: DEFAULT_SUGGESTIONS.slice(0, 3),
-        }
-      }
-
-      const currentPts = history.overallPoints
-      const projectedPointsBs = currentPts + registeredUnits * 4
-      const projectedCGPABs = (projectedPointsBs / totalUnits).toFixed(2)
-
-      return {
-        id: `atlas-${Date.now()}`,
-        sender: 'atlas',
-        text: `If you achieve straight Grade 'B's (4.00 Grade Points per unit) across all your current ${registeredUnits} registered units, your Semester GPA will be **4.00**. Here is how your cumulative standing responds:`,
-        timestamp: 'Just now',
-        highlightCard: {
-          title: 'Simulation: Straight Grade B Scenario (4.00 SGPA)',
-          stats: [
-            { label: 'Current CGPA', value: `${currentCGPA} / 5.00` },
-            { label: 'Semester SGPA', value: '4.00 (48 QP)' },
-            { label: 'Projected CGPA', value: `${projectedCGPABs} / 5.00`, tone: 'primary' },
-            { label: 'Degree Classification', value: 'Second Class Upper (2:1)', tone: 'success' },
-          ],
-          note: `You remain solidly in Second Class Upper division (${projectedCGPABs}). To aim for First Class Honours (4.50+), at least 2 courses must be elevated to Grade 'A'.`,
-        },
-        suggestions: [
-          { label: "🎯 Minimum exam scores for 'A'", prompt: "Break down the exact minimum exam marks I need out of 70 for each of my registered courses to secure Grade A." },
-          { label: "📈 How to reach First Class?", prompt: "Show me the exact mathematical path and semester GPA required across my remaining units to graduate with First Class Honours." },
-        ],
-      }
-    }
-
-    // Default intelligent response utilizing user's exact record
-    return {
-      id: `atlas-${Date.now()}`,
-      sender: 'atlas',
-      text: `Based on your ${profile.department} records: you have **${registeredUnits} credit units** registered this semester and a current cumulative CGPA of **${currentCGPA} / 5.00**. You have completed ${unitsEarned} of ${unitsRequired} required units. Your strategic objective is maintaining exam scores above 45/70 across all courses to protect your degree standing.`,
-      timestamp: 'Just now',
-      suggestions: DEFAULT_SUGGESTIONS.slice(0, 3),
-    }
-  }
-
-  // Handle user submitting message
+  // Intelligent Contextual Responses Engine - all responses now query the backend Gemini AI
   const handleSendMessage = async (textToSend?: string) => {
     const raw = textToSend || question
     const trimmed = raw.trim()
@@ -582,16 +434,18 @@ export default function ProfessorAtlasPage() {
         }
         return
       }
-    } catch (err) {
-      console.warn('Backend Atlas AI error, falling back to local computation:', err)
-    }
-
-    const response = generateAtlasResponse(trimmed)
-    setMessages((prev) => [...prev, response])
-    setIsTyping(false)
-
-    if (voiceAutoSpeak) {
-      speakText(response.text, response.id)
+      throw new Error('No answer returned from server.')
+    } catch (err: any) {
+      console.warn('Backend Atlas AI error:', err)
+      const errorMsg = err?.message || 'Unable to connect to Prof. Zikora right now. Please check your network and try again.'
+      const response: ChatMessage = {
+        id: `atlas-${Date.now()}`,
+        sender: 'atlas',
+        text: `⚠️ **Prof. Zikora**: ${errorMsg}`,
+        timestamp: 'Just now',
+      }
+      setMessages((prev) => [...prev, response])
+      setIsTyping(false)
     }
   }
 

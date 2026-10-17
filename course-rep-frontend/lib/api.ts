@@ -339,8 +339,10 @@ export const api = {
   },
   atlas: {
     getRecord: () => apiRequest<AcademicRecord>('/atlas/record'),
+    getHistory: () =>
+      apiRequest<{ id: number; user_id: number; sender: string; content: string; created_at: string }[]>('/atlas/history'),
     ask: (question: string) =>
-      apiRequest<{ answer: string; confidence: number; sources: string[] }>('/atlas/ask', {
+      apiRequest<{ question: string; answer: string; record?: AcademicRecord }>('/atlas/ask', {
         method: 'POST',
         body: JSON.stringify({ question }),
       }),
