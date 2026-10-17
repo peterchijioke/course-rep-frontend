@@ -34,6 +34,7 @@ import { Pill } from '@/components/pill'
 import { nigerianTertiaryData, getEnrolledCourses, type Course } from '@/lib/data'
 import {
   getAcademicHistory,
+  recalculateAcademicHistory,
   saveAcademicHistory,
   resetAcademicHistory,
   updateCourseInSemester,
@@ -49,8 +50,8 @@ import {
 } from '@/lib/academic-records'
 
 export default function AcademicRecordsPage() {
-  const [history, setHistory] = useState<AcademicHistory>(() => getAcademicHistory())
-  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>(() => getEnrolledCourses())
+  const [history, setHistory] = useState<AcademicHistory>(() => recalculateAcademicHistory([]))
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([])
   const [activeSemesterId, setActiveSemesterId] = useState<string>('sem-400-1')
   const [targetCGPA, setTargetCGPA] = useState<number>(4.52)
   const [showTranscriptModal, setShowTranscriptModal] = useState<boolean>(false)
@@ -73,6 +74,9 @@ export default function AcademicRecordsPage() {
 
   // Listen to external updates from other tabs/pages
   useEffect(() => {
+    setHistory(getAcademicHistory())
+    setEnrolledCourses(getEnrolledCourses())
+
     const handleUpdate = () => {
       setHistory(getAcademicHistory())
       setEnrolledCourses(getEnrolledCourses())
