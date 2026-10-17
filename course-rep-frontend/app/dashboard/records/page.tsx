@@ -473,6 +473,23 @@ export default function AcademicRecordsPage() {
 
           {/* ACTIVE SEMESTER METRICS STRIP */}
           {activeSemesterId !== 'all' ? (
+            !activeSemester ? (
+              <div style={{ padding: '60px 20px', textAlign: 'center', background: 'var(--card)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+                <GraduationCap style={{ width: '40px', height: '40px', color: '#6366f1', margin: '0 auto 12px', opacity: 0.8 }} />
+                <h3 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--foreground)' }}>No Semester Records Yet</h3>
+                <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', margin: '0 0 16px', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
+                  Click &quot;+ Add Semester Session&quot; above to log your verified course results and compute your live CGPA.
+                </p>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => setShowAddSemesterModal(true)}
+                  style={{ fontSize: '12px', padding: '8px 16px' }}
+                >
+                  <Plus style={{ width: '13px', marginRight: '6px' }} /> Add First Semester Record
+                </button>
+              </div>
+            ) : (
             <div>
               <div className="sem-metrics-banner">
                 <div className="sem-metric-box purple">
@@ -768,6 +785,7 @@ export default function AcademicRecordsPage() {
                 </table>
               </div>
             </div>
+            )
           ) : (
             /* ALL SEMESTERS FULL ACADEMIC TRANSCRIPT VIEW */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>

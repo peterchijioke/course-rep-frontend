@@ -1676,7 +1676,7 @@ export default function CoursesPage() {
                           alignItems: 'center',
                           gap: '12px',
                           padding: '12px',
-                          background: '#fff',
+                          background: 'var(--card)',
                           borderRadius: '8px',
                           border: '1px solid var(--border)',
                         }}
@@ -1736,7 +1736,7 @@ export default function CoursesPage() {
                   </div>
 
                   {/* 12-Week Interactive Syllabus Checklist */}
-                  <div className="overview-box" style={{ background: '#fff' }}>
+                  <div className="overview-box" style={{ background: 'var(--card)' }}>
                     <div className="syllabus-section-header">
                       <div>
                         <h3>
@@ -1958,7 +1958,7 @@ export default function CoursesPage() {
                       <article
                         className={`announcement ${item.urgent ? 'urgent' : ''}`}
                         key={item.id}
-                        style={{ padding: '14px', background: '#fff', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '10px' }}
+                        style={{ padding: '14px', background: 'var(--card)', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '10px' }}
                       >
                         <div className="announcement-icon">
                           <Bell />

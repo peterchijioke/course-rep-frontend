@@ -336,22 +336,35 @@ export default function MarketplacePage() {
       </div>
 
       {filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: '12px', border: '1px solid var(--border)' }}>
-          <Store style={{ width: '40px', height: '40px', color: '#94a3b8', margin: '0 auto 12px' }} />
-          <h3 style={{ margin: 0, fontSize: '15px' }}>No items match your search</h3>
-          <p style={{ color: '#64748b', fontSize: '12px', margin: '4px 0 16px' }}>
-            Try adjusting your search keywords or clear the category filter.
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--card)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+          <Store style={{ width: '40px', height: '40px', color: '#6366f1', margin: '0 auto 12px', opacity: 0.8 }} />
+          <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--foreground)' }}>No marketplace items listed yet</h3>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', margin: '6px 0 16px' }}>
+            {query || categoryFilter !== 'All'
+              ? 'Try adjusting your search keywords or clear the category filter.'
+              : 'Be the first to list verified study materials, electronics, or campus essentials.'}
           </p>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => {
-              setQuery('')
-              setCategoryFilter('All')
-            }}
-          >
-            Clear filters
-          </button>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            {(query || categoryFilter !== 'All') && (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  setQuery('')
+                  setCategoryFilter('All')
+                }}
+              >
+                Clear filters
+              </button>
+            )}
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => setShowListItemModal(true)}
+            >
+              + List an Item
+            </button>
+          </div>
         </div>
       )}
 

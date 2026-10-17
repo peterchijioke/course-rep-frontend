@@ -23,6 +23,7 @@ import { Panel } from '@/components/panel'
 import { Pill } from '@/components/pill'
 import { logoutUser } from '@/lib/auth'
 import { defaultUserProfile, getUserProfile, saveUserProfile } from '@/lib/user-profile'
+import { api } from '@/lib/api'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -32,11 +33,29 @@ export default function SettingsPage() {
 
   // Profile State
   const [profile, setProfile] = useState(defaultUserProfile)
+  const [saving, setSaving] = useState(false)
 
-  // Sync profile and mount state
+  // Sync profile and mount state from local and live backend
   useEffect(() => {
     setMounted(true)
     setProfile(getUserProfile())
+
+    api.auth.me().then((me) => {
+      if (me) {
+        const synced = {
+          name: me.full_name,
+          email: me.email,
+          institution: me.institution,
+          department: me.department,
+          level: me.academic_level,
+          session: me.academic_session,
+        }
+        saveUserProfile(synced)
+        setProfile((prev) => ({ ...prev, ...synced }))
+      }
+    }).catch((err) => {
+      console.warn('Could not sync user profile from backend:', err)
+    })
   }, [])
 
   // Notification toggles
@@ -60,21 +79,45 @@ export default function SettingsPage() {
     router.refresh()
   }
 
-  const handleSaveProfile = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setSaving(true)
     const form = new FormData(e.currentTarget)
+    const name = String(form.get('name') || profile.name).trim()
+    const matricNo = String(form.get('matricNo') || profile.matricNo).trim()
+    const phone = String(form.get('phone') || profile.phone).trim()
+    const department = String(form.get('department') || profile.department).trim()
+    const level = String(form.get('level') || profile.level).trim()
+    const bio = String(form.get('bio') || profile.bio).trim()
+
     const updated = {
-      name: String(form.get('name') || profile.name).trim(),
-      matricNo: String(form.get('matricNo') || profile.matricNo).trim(),
-      phone: String(form.get('phone') || profile.phone).trim(),
-      department: String(form.get('department') || profile.department).trim(),
-      level: String(form.get('level') || profile.level).trim(),
-      bio: String(form.get('bio') || profile.bio).trim(),
+      name,
+      matricNo,
+      phone,
+      department,
+      level,
+      bio,
     }
+
+    // 1. Update local storage & fire local update event
     const saved = saveUserProfile(updated)
     setProfile(saved)
-    setShowEditModal(false)
-    showToastMsg('Academic profile updated successfully!')
+
+    // 2. Persist to live PostgreSQL backend
+    try {
+      await api.auth.updateProfile({
+        full_name: name,
+        department,
+        academic_level: level,
+      })
+      showToastMsg('Profile updated in backend database successfully!')
+    } catch (err: any) {
+      console.warn('Backend update failed:', err)
+      showToastMsg(`Profile saved locally (${err?.message || 'backend offline'})`)
+    } finally {
+      setSaving(false)
+      setShowEditModal(false)
+    }
   }
 
   return (
@@ -319,8 +362,8 @@ export default function SettingsPage() {
               >
                 Cancel
               </button>
-              <button type="submit" className="primary-button">
-                Save changes
+              <button type="submit" className="primary-button" disabled={saving}>
+                {saving ? 'Saving...' : 'Save changes'}
               </button>
             </div>
           </form>
