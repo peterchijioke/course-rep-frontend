@@ -1,17 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CalendarDays, Plus, Trash2, X } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Panel } from '@/components/panel'
 import { Pill } from '@/components/pill'
-import { courses, initialCalendarEvents, type CalendarEvent } from '@/lib/data'
+import { api, type TimetableSlot, type Course } from '@/lib/api'
 
 export default function CalendarPage() {
   const [showForm, setShowForm] = useState(false)
   const [viewMode, setViewMode] = useState<'Week' | 'List'>('Week')
   const [selectedDay, setSelectedDay] = useState('Mon 12')
-  const [events, setEvents] = useState<CalendarEvent[]>(initialCalendarEvents)
+  const [events, setEvents] = useState<TimetableSlot[]>([])
+  const [coursesList, setCoursesList] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+
   const [draft, setDraft] = useState({
     title: '',
     date: 'Mon 12',
@@ -22,6 +25,28 @@ export default function CalendarPage() {
   })
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  useEffect(() => {
+    const fetchTimetableAndCourses = async () => {
+      setLoading(true)
+      try {
+        const slots = await api.timetable.getAll()
+        setEvents(slots || [])
+      } catch (err) {
+        console.error('Failed to load timetable:', err)
+      }
+
+      try {
+        const c = await api.courses.getAll()
+        setCoursesList(c || [])
+      } catch (err) {
+        console.error('Failed to load courses:', err)
+      }
+      setLoading(false)
+    }
+
+    fetchTimetableAndCourses()
+  }, [])
 
   const visibleEvents =
     viewMode === 'List' ? events : events.filter((item) => item.date === selectedDay)
@@ -50,7 +75,6 @@ export default function CalendarPage() {
     const itemToMove = visibleEvents[draggedIndex]
     if (!itemToMove) return
 
-    // Reorder visible events by inserting at target index
     const newVisible = [...visibleEvents]
     newVisible.splice(draggedIndex, 1)
     newVisible.splice(targetIndex, 0, itemToMove)
@@ -66,36 +90,63 @@ export default function CalendarPage() {
     setDragOverIndex(null)
   }
 
-  const moveEventToDay = (day: string) => {
+  const moveEventToDay = async (day: string) => {
     if (draggedIndex === null) return
     const itemToMove = visibleEvents[draggedIndex]
     if (!itemToMove) return
 
     setEvents((current) =>
       current.map((item) =>
-        item === itemToMove ? { ...item, date: day } : item
+        item.id === itemToMove.id ? { ...item, date: day } : item
       )
     )
     setSelectedDay(day)
     setDraggedIndex(null)
     setDragOverIndex(null)
+
+    if (itemToMove.id) {
+      try {
+        await api.timetable.updateDate(itemToMove.id, day)
+      } catch (err) {
+        console.warn('Failed to persist date move to backend:', err)
+      }
+    }
   }
 
-  const addEvent = (event: React.FormEvent) => {
+  const addEvent = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!draft.title.trim()) return
-    setEvents((current) => [
-      ...current,
-      {
+
+    try {
+      const created = await api.timetable.create({
         title: draft.title.trim(),
+        date: draft.date,
+        start: draft.start,
+        end: draft.end,
+        location: draft.location || 'No location',
         course: draft.course,
+        tone: 'amber-bar',
+      })
+
+      if (created) {
+        setEvents((current) => [...current, created])
+      }
+    } catch (err) {
+      // Local optimistic fallback
+      const fallbackSlot: TimetableSlot = {
+        id: Date.now(),
+        title: draft.title.trim(),
+        course_code: draft.course,
         date: draft.date,
         time: `${draft.start} – ${draft.end}`,
-        location: draft.location || 'No location',
+        location: draft.location || 'Campus',
         tone: 'amber-bar',
+        is_personal: true,
         removable: true,
-      },
-    ])
+      }
+      setEvents((current) => [...current, fallbackSlot])
+    }
+
     setDraft({
       title: '',
       date: 'Mon 12',
@@ -107,11 +158,20 @@ export default function CalendarPage() {
     setShowForm(false)
   }
 
+  const removeEvent = async (slotId: number) => {
+    setEvents((current) => current.filter((event) => event.id !== slotId))
+    try {
+      await api.timetable.delete(slotId)
+    } catch (err) {
+      console.warn('Failed to delete event from backend:', err)
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="Academic calendar"
-        subtitle="Your lectures and deadlines for the week of October 12–18, 2026."
+        subtitle="Your lectures and deadlines for the active academic semester."
         action={
           <button
             type="button"
@@ -168,7 +228,7 @@ export default function CalendarPage() {
               className={`schedule-item ${
                 draggedIndex === index ? 'is-dragging' : ''
               } ${dragOverIndex === index ? 'is-drag-over' : ''}`}
-              key={`${item.title}-${index}`}
+              key={item.id || `${item.title}-${index}`}
               draggable
               onDragStart={() => handleDragStart(index)}
               onDragOver={(e) => handleDragOverItem(e, index)}
@@ -179,12 +239,12 @@ export default function CalendarPage() {
               }}
             >
               <span className="schedule-time">
-                {item.time.split(' ')[0]}
+                {item.time ? item.time.split(' ')[0] : '10:00'}
                 <br />
-                <small>{item.time.includes('PM') ? 'PM' : 'AM'}</small>
+                <small>{item.time && item.time.includes('PM') ? 'PM' : 'AM'}</small>
               </span>
-              <div className={`schedule-bar ${item.tone}`}>
-                <Pill>{item.course}</Pill>
+              <div className={`schedule-bar ${item.tone || 'blue-bar'}`}>
+                <Pill>{item.course_code || 'EVENT'}</Pill>
                 <strong>{item.title}</strong>
                 <span>
                   {item.location} · {item.time}
@@ -193,11 +253,7 @@ export default function CalendarPage() {
                   <button
                     type="button"
                     className="event-remove"
-                    onClick={() =>
-                      setEvents((current) =>
-                        current.filter((event) => event !== item)
-                      )
-                    }
+                    onClick={() => removeEvent(item.id)}
                     aria-label={`Remove ${item.title}`}
                   >
                     <Trash2 /> Remove
@@ -208,7 +264,7 @@ export default function CalendarPage() {
           ))}
         </div>
 
-        {visibleEvents.length === 0 && (
+        {!loading && visibleEvents.length === 0 && (
           <div className="calendar-empty">
             <CalendarDays />
             <strong>No events scheduled</strong>
@@ -240,61 +296,63 @@ export default function CalendarPage() {
                 type="button"
                 className="icon-btn"
                 onClick={() => setShowForm(false)}
-                aria-label="Close add event form"
+                aria-label="Close dialog"
               >
                 <X />
               </button>
             </div>
 
             <label>
-              Event title
+              Title
               <input
-                required
-                autoFocus
+                type="text"
+                placeholder="Study session, assignment due..."
                 value={draft.title}
                 onChange={(event) =>
                   setDraft({ ...draft, title: event.target.value })
                 }
-                placeholder="e.g. Study group"
+                required
               />
             </label>
 
-            <div className="event-field-grid">
+            <div className="dialog-grid">
               <label>
-                Date
+                Day
                 <select
                   value={draft.date}
                   onChange={(event) =>
                     setDraft({ ...draft, date: event.target.value })
                   }
                 >
-                  {['Mon 12', 'Tue 13', 'Wed 14', 'Thu 15', 'Fri 16'].map(
-                    (day) => (
-                      <option key={day}>{day}</option>
-                    )
-                  )}
+                  <option value="Mon 12">Monday 12</option>
+                  <option value="Tue 13">Tuesday 13</option>
+                  <option value="Wed 14">Wednesday 14</option>
+                  <option value="Thu 15">Thursday 15</option>
+                  <option value="Fri 16">Friday 16</option>
                 </select>
               </label>
 
               <label>
-                Course
+                Category
                 <select
                   value={draft.course}
                   onChange={(event) =>
                     setDraft({ ...draft, course: event.target.value })
                   }
                 >
-                  <option>Personal event</option>
-                  {courses.map((course) => (
-                    <option key={course.code}>{course.code}</option>
+                  <option value="Personal event">Personal event</option>
+                  {coursesList.map((c) => (
+                    <option key={c.id || c.code} value={c.code}>
+                      {c.code} · {c.name}
+                    </option>
                   ))}
                 </select>
               </label>
             </div>
 
-            <div className="event-field-grid">
+            <div className="dialog-grid">
               <label>
-                Start time
+                Start
                 <input
                   type="time"
                   value={draft.start}
@@ -303,9 +361,8 @@ export default function CalendarPage() {
                   }
                 />
               </label>
-
               <label>
-                End time
+                End
                 <input
                   type="time"
                   value={draft.end}
@@ -319,11 +376,12 @@ export default function CalendarPage() {
             <label>
               Location
               <input
+                type="text"
+                placeholder="Room, building, or link"
                 value={draft.location}
                 onChange={(event) =>
                   setDraft({ ...draft, location: event.target.value })
                 }
-                placeholder="Optional"
               />
             </label>
 
@@ -336,7 +394,7 @@ export default function CalendarPage() {
                 Cancel
               </button>
               <button type="submit" className="primary-button">
-                <Plus /> Save event
+                Add to calendar
               </button>
             </div>
           </form>

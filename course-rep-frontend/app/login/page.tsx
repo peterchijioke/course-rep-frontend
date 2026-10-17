@@ -7,6 +7,8 @@ import { ChevronRight } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { Pill } from '@/components/pill'
 import { loginUser } from '@/lib/auth'
+import { api } from '@/lib/api'
+import { saveUserProfile } from '@/lib/user-profile'
 
 function LoginForm() {
   const router = useRouter()
@@ -14,16 +16,38 @@ function LoginForm() {
   const redirectTarget = searchParams.get('redirect') || '/dashboard'
 
   const [email, setEmail] = useState('peter.chijioke@example.edu.ng')
-  const [password, setPassword] = useState('••••••••')
+  const [password, setPassword] = useState('password123')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    loginUser()
-    router.push(redirectTarget)
-    router.refresh()
+    setError(null)
+
+    try {
+      const res = await api.auth.login({ email: email.trim(), password })
+      loginUser(res.token)
+
+      if (res.user) {
+        saveUserProfile({
+          name: res.user.full_name || 'Peter Chijioke',
+          email: res.user.email || email,
+          institution: res.user.institution || 'Example University',
+          department: res.user.department || 'Computer Science',
+          level: (res.user.academic_level as any) || '400 Level',
+          semester: 'First Semester',
+          role: (res.user.role as any) || 'student',
+        })
+      }
+
+      router.push(redirectTarget)
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your credentials.')
+      setLoading(false)
+    }
   }
 
   return (
@@ -33,9 +57,23 @@ function LoginForm() {
           <Logo href="/" />
         </div>
         <div className="auth-card">
-          <Pill>Example University</Pill>
+          <Pill>Tertiary Academic Workspace</Pill>
           <h1>Welcome back</h1>
           <p>Log in to continue to your academic workspace.</p>
+
+          {error && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#ef4444',
+              borderRadius: '8px',
+              padding: '10px 14px',
+              fontSize: '13px',
+              marginBottom: '16px',
+            }}>
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <label>

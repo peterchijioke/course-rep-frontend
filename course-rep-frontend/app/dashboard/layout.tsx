@@ -24,8 +24,9 @@ import {
 } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { defaultUserProfile, getUserProfile, type UserProfile } from '@/lib/user-profile'
+import { defaultUserProfile, getUserProfile, saveUserProfile, type UserProfile } from '@/lib/user-profile'
 import { getEnrolledCourses } from '@/lib/data'
+import { api, getAuthToken } from '@/lib/api'
 
 interface NavItem {
   label: string
@@ -66,12 +67,46 @@ export default function DashboardLayout({
   useEffect(() => {
     setMounted(true)
     setUserProfile(getUserProfile())
-    const updateEnrolled = () => {
-      setEnrolledCount(getEnrolledCourses().length)
+
+    // Fetch live user and enrolled courses from backend
+    const syncWithBackend = async () => {
+      const token = getAuthToken()
+      if (!token) return
+
+      try {
+        const liveUser = await api.auth.me()
+        if (liveUser) {
+          const updated = {
+            name: liveUser.full_name,
+            email: liveUser.email,
+            institution: liveUser.institution,
+            department: liveUser.department,
+            level: liveUser.academic_level,
+            role: (liveUser.role === 'representative' ? 'rep' : liveUser.role) as any,
+          }
+          saveUserProfile(updated)
+          setUserProfile((prev) => ({ ...prev, ...updated }))
+        }
+      } catch (err) {
+        console.warn('Could not sync user profile from backend:', err)
+      }
+
+      try {
+        const enrolled = await api.courses.getMyEnrolled()
+        if (Array.isArray(enrolled)) {
+          setEnrolledCount(enrolled.length)
+        }
+      } catch (err) {
+        // Fallback to local
+        setEnrolledCount(getEnrolledCourses().length)
+      }
     }
-    updateEnrolled()
+
+    syncWithBackend()
 
     const handleProfileUpdate = () => setUserProfile(getUserProfile())
+    const updateEnrolled = () => setEnrolledCount(getEnrolledCourses().length)
+
     window.addEventListener('user-profile-updated', handleProfileUpdate)
     window.addEventListener('enrolled-courses-updated', updateEnrolled)
     return () => {
@@ -192,7 +227,7 @@ export default function DashboardLayout({
             </div>
             <ChevronRight />
           </Link>
-          <span className="version">Course Rep v1.0 · Example University</span>
+          <span className="version">Course Rep v1.0 · {userProfile.institution || 'Campus Hub'}</span>
         </div>
       </aside>
 

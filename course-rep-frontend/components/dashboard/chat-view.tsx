@@ -33,6 +33,8 @@ import {
 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Pill } from '@/components/pill'
+import { api, getWebSocketUrl, getAuthToken, type ChatGroup, type ChatMessage } from '@/lib/api'
+import { getUserProfile } from '@/lib/user-profile'
 
 interface MessageItem {
   id: string
@@ -341,6 +343,11 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
   const [showNewDMModal, setShowNewDMModal] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
+  // WebSocket State
+  const wsRef = useRef<WebSocket | null>(null)
+  const [wsConnected, setWsConnected] = useState(false)
+  const [currentUser, setCurrentUser] = useState({ id: 7, name: 'Peter Chijioke' })
+
   const showToastMsg = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(null), 3500)
@@ -351,6 +358,129 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
   const currentContact = contacts.find((c) => c.id === activeContactId) || contacts[0]
   const currentKey = direct ? activeContactId : activeGroupId
   const currentMessages = conversationMessages[currentKey] || []
+
+  // Load current user & groups from backend
+  useEffect(() => {
+    const initData = async () => {
+      try {
+        const me = await api.auth.me()
+        if (me) {
+          setCurrentUser({ id: me.id, name: me.full_name })
+        }
+      } catch (e) {
+        const local = getUserProfile()
+        if (local) setCurrentUser({ id: 7, name: local.name })
+      }
+
+      try {
+        const liveGroups = await api.chat.getGroups()
+        if (Array.isArray(liveGroups) && liveGroups.length > 0) {
+          const mapped: GroupChannel[] = liveGroups.map((g) => ({
+            id: `grp-${g.id}`,
+            name: g.name,
+            category: 'course',
+            codeTag: 'Active Group Room',
+            memberCount: 24,
+            description: g.description || 'Class discussion room',
+            inviteCode: `CR-${g.id}`,
+            members: [
+              { name: 'Daniel Chukwu', role: 'Course Representative', avatar: 'DC' },
+              { name: 'Peter Chijioke (You)', role: 'Student', avatar: 'PE' },
+            ],
+          }))
+          setChannels((prev) => {
+            const existingIds = new Set(prev.map((p) => p.id))
+            const newChannels = mapped.filter((m) => !existingIds.has(m.id))
+            return [...prev, ...newChannels]
+          })
+        }
+      } catch (err) {
+        console.warn('Failed to load chat groups from API:', err)
+      }
+    }
+
+    initData()
+  }, [])
+
+  // Setup WebSocket connection
+  useEffect(() => {
+    let ws: WebSocket | null = null
+    try {
+      const url = getWebSocketUrl()
+      ws = new WebSocket(url)
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        setWsConnected(true)
+        if (!direct && activeGroupId) {
+          const gid = parseInt(activeGroupId.replace(/\D/g, '')) || 1
+          ws?.send(JSON.stringify({ type: 'join_group', group_id: gid }))
+        }
+      }
+
+      ws.onclose = () => {
+        setWsConnected(false)
+      }
+
+      ws.onerror = () => {
+        setWsConnected(false)
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const res = JSON.parse(event.data)
+          if (res.type === 'message' && res.data) {
+            const m = res.data
+            const isMine = m.sender_id === currentUser.id
+            const incomingMsg: MessageItem = {
+              id: `msg-${m.id || Date.now()}`,
+              sender: isMine ? `${m.sender_name} (You)` : m.sender_name,
+              avatar: (m.sender_name || 'CL').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase(),
+              role: isMine ? 'you' : 'student',
+              text: m.content,
+              time: 'Just now',
+              isMine,
+              attachment: m.attachment_url
+                ? {
+                    name: m.attachment_name || 'attachment',
+                    url: m.attachment_url,
+                    type: m.attachment_type || '',
+                    isImage: m.attachment_type?.startsWith('image/'),
+                  }
+                : undefined,
+            }
+
+            const targetKey = m.group_id
+              ? `grp-${m.group_id}`
+              : `dm-${m.recipient_id === currentUser.id ? m.sender_id : m.recipient_id}`
+
+            setConversationMessages((prev) => ({
+              ...prev,
+              [targetKey]: [...(prev[targetKey] || []).filter((item) => item.id !== incomingMsg.id), incomingMsg],
+            }))
+          }
+        } catch (e) {
+          // ignore non-json messages
+        }
+      }
+    } catch (e) {
+      console.warn('WebSocket init exception:', e)
+    }
+
+    return () => {
+      if (ws) {
+        ws.close()
+      }
+    }
+  }, [currentUser.id])
+
+  // Join group channel room when group changes
+  useEffect(() => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && !direct && activeGroupId) {
+      const gid = parseInt(activeGroupId.replace(/\D/g, '')) || 1
+      wsRef.current.send(JSON.stringify({ type: 'join_group', group_id: gid }))
+    }
+  }, [activeGroupId, direct, wsConnected])
 
   useEffect(() => {
     if (messageListRef.current) {
@@ -396,7 +526,7 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  // Send message
+  // Send message via WebSocket & API
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputText.trim() && !attachment) return
@@ -407,8 +537,8 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
 
     const newMsg: MessageItem = {
       id: `msg-${Date.now()}`,
-      sender: 'Peter Chijioke (You)',
-      avatar: 'PE',
+      sender: `${currentUser.name} (You)`,
+      avatar: currentUser.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase(),
       role: 'you',
       text: inputText.trim(),
       time: 'Just now',
@@ -428,6 +558,54 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
       [currentKey]: [...(prev[currentKey] || []), newMsg],
     }))
 
+    // Send through live WebSocket
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      if (direct) {
+        const recipientId = parseInt(activeContactId.replace(/\D/g, '')) || 2
+        wsRef.current.send(
+          JSON.stringify({
+            type: 'direct_message',
+            recipient_id: recipientId,
+            content: inputText.trim(),
+            attachment_name: attachment?.name || '',
+            attachment_url: attachmentPreviewUrl || '',
+            attachment_type: attachment?.type || '',
+          })
+        )
+      } else {
+        const groupId = parseInt(activeGroupId.replace(/\D/g, '')) || 1
+        wsRef.current.send(
+          JSON.stringify({
+            type: 'group_message',
+            group_id: groupId,
+            content: inputText.trim(),
+            attachment_name: attachment?.name || '',
+            attachment_url: attachmentPreviewUrl || '',
+            attachment_type: attachment?.type || '',
+          })
+        )
+      }
+    }
+
+    // Persist via REST as backup
+    if (direct) {
+      const recipientId = parseInt(activeContactId.replace(/\D/g, '')) || 2
+      api.chat.sendDirectMessage(recipientId, {
+        content: inputText.trim(),
+        attachment_name: attachment?.name || '',
+        attachment_url: attachmentPreviewUrl || '',
+        attachment_type: attachment?.type || '',
+      }).catch((e) => console.warn('REST direct message error:', e))
+    } else {
+      const groupId = parseInt(activeGroupId.replace(/\D/g, '')) || 1
+      api.chat.sendGroupMessage(groupId, {
+        content: inputText.trim(),
+        attachment_name: attachment?.name || '',
+        attachment_url: attachmentPreviewUrl || '',
+        attachment_type: attachment?.type || '',
+      }).catch((e) => console.warn('REST group message error:', e))
+    }
+
     setInputText('')
     setAttachment(null)
     setAttachmentPreviewUrl(null)
@@ -435,7 +613,7 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
   }
 
   // Create Custom Group
-  const handleCreateGroupSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateGroupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
     const name = String(form.get('name') || '').trim()
@@ -443,23 +621,44 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
     if (!name) return
 
     const newCode = `CR-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
-    const newGrp: GroupChannel = {
-      id: `grp-${Date.now()}`,
-      name,
-      category: 'study_group',
-      codeTag: 'Custom Study Cell',
-      memberCount: 1,
-      description: desc || 'Student collaborative workspace.',
-      inviteCode: newCode,
-      members: [
-        { name: 'Peter Chijioke (You)', role: 'Creator / Admin', avatar: 'PE' },
-      ],
-    }
 
-    setChannels((prev) => [...prev, newGrp])
-    setActiveGroupId(newGrp.id)
-    setShowCreateGroup(false)
-    showToastMsg(`Created "${name}"! Classmates can join with code: ${newCode}`)
+    try {
+      const created = await api.chat.createGroup({ name, description: desc })
+      const newGrp: GroupChannel = {
+        id: `grp-${created.id}`,
+        name: created.name,
+        category: 'study_group',
+        codeTag: 'Custom Study Cell',
+        memberCount: 1,
+        description: desc || 'Student collaborative workspace.',
+        inviteCode: newCode,
+        members: [
+          { name: `${currentUser.name} (You)`, role: 'Creator / Admin', avatar: 'PE' },
+        ],
+      }
+      setChannels((prev) => [...prev, newGrp])
+      setActiveGroupId(newGrp.id)
+      setShowCreateGroup(false)
+      showToastMsg(`Created "${name}"! Classmates can join with code: ${newCode}`)
+    } catch (err) {
+      // Local fallback
+      const newGrp: GroupChannel = {
+        id: `grp-${Date.now()}`,
+        name,
+        category: 'study_group',
+        codeTag: 'Custom Study Cell',
+        memberCount: 1,
+        description: desc || 'Student collaborative workspace.',
+        inviteCode: newCode,
+        members: [
+          { name: `${currentUser.name} (You)`, role: 'Creator / Admin', avatar: 'PE' },
+        ],
+      }
+      setChannels((prev) => [...prev, newGrp])
+      setActiveGroupId(newGrp.id)
+      setShowCreateGroup(false)
+      showToastMsg(`Created "${name}"!`)
+    }
   }
 
   // Join by 6-digit Code
@@ -661,7 +860,32 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '3px 8px',
+                  borderRadius: '999px',
+                  background: wsConnected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  color: wsConnected ? '#10b981' : '#ef4444',
+                  border: wsConnected ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(239, 68, 68, 0.25)',
+                }}
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: wsConnected ? '#10b981' : '#ef4444',
+                    boxShadow: wsConnected ? '0 0 6px #10b981' : 'none',
+                  }}
+                />
+                {wsConnected ? 'WebSocket Live' : 'Connecting WS...'}
+              </span>
               {!direct ? (
                 <button
                   type="button"

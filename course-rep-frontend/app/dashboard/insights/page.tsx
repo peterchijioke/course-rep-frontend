@@ -18,6 +18,7 @@ import { Panel } from '@/components/panel'
 import { Pill } from '@/components/pill'
 import { getAcademicHistory, type AcademicHistory, getDegreeClassification } from '@/lib/academic-records'
 import { getUserProfile, type UserProfile, defaultUserProfile } from '@/lib/user-profile'
+import { api } from '@/lib/api'
 
 export default function InsightsPage() {
   const [history, setHistory] = useState<AcademicHistory>(() => getAcademicHistory())
@@ -29,6 +30,40 @@ export default function InsightsPage() {
     setMounted(true)
     setHistory(getAcademicHistory())
     setProfile(getUserProfile())
+
+    const syncBackendInsights = async () => {
+      try {
+        const me = await api.auth.me()
+        if (me) {
+          setProfile((prev) => ({
+            ...prev,
+            name: me.full_name,
+            email: me.email,
+            institution: me.institution,
+            department: me.department,
+            level: me.academic_level,
+          }))
+        }
+      } catch {
+        // ignore
+      }
+
+      try {
+        const rec = await api.atlas.getRecord()
+        if (rec) {
+          setHistory((prev) => ({
+            ...prev,
+            cgpa: rec.cgpa,
+            totalUnitsEarned: rec.completed_credits,
+            totalUnitsRequired: rec.total_credits,
+            overallPoints: Number((rec.cgpa * rec.completed_credits).toFixed(2)),
+          }))
+        }
+      } catch {
+        // ignore
+      }
+    }
+    syncBackendInsights()
 
     const handleUpdate = () => {
       setHistory(getAcademicHistory())

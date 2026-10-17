@@ -7,6 +7,7 @@ import { Logo } from '@/components/logo'
 import { Pill } from '@/components/pill'
 import { getUserProfile, saveUserProfile } from '@/lib/user-profile'
 import { saveEnrolledCourses } from '@/lib/data'
+import { api } from '@/lib/api'
 import { getEnlistedInstitutions, enlistInstitution } from '@/lib/institutions'
 import {
   getEnlistedFaculties,
@@ -102,6 +103,14 @@ export default function OnboardingPage() {
         announcements: true,
       },
     })
+
+    // Sync with live backend API
+    api.auth.onboarding({
+      institution: finalInstitution,
+      department: finalDepartment,
+      academic_level: finalLevel,
+      academic_session: finalSession,
+    }).catch((err) => console.warn('Onboarding sync to backend warning:', err))
 
     router.push('/dashboard')
     router.refresh()

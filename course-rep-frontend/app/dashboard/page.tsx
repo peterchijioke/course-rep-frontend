@@ -16,27 +16,100 @@ import {
 import { PageHeader } from '@/components/page-header'
 import { Panel } from '@/components/panel'
 import { Pill } from '@/components/pill'
-import { announcements, upcomingDeadlines, getEnrolledCourses, type Course } from '@/lib/data'
-import { defaultUserProfile, getUserProfile, type UserProfile } from '@/lib/user-profile'
+import {
+  api,
+  getAuthToken,
+  type Course,
+  type AnnouncementItem,
+  type TimetableSlot,
+  type MarketplaceItem,
+} from '@/lib/api'
+import { defaultUserProfile, getUserProfile, saveUserProfile, type UserProfile } from '@/lib/user-profile'
 
 export default function DashboardOverviewPage() {
   const [profile, setProfile] = useState<UserProfile>(defaultUserProfile)
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([])
+  const [announcementsList, setAnnouncementsList] = useState<AnnouncementItem[]>([])
+  const [timetableSlots, setTimetableSlots] = useState<TimetableSlot[]>([])
+  const [marketItems, setMarketItems] = useState<MarketplaceItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     setProfile(getUserProfile())
-    setEnrolledCourses(getEnrolledCourses())
+
+    const loadData = async () => {
+      setLoading(true)
+      const token = getAuthToken()
+
+      // Fetch user profile if logged in
+      if (token) {
+        try {
+          const me = await api.auth.me()
+          if (me) {
+            const updated = {
+              name: me.full_name,
+              email: me.email,
+              institution: me.institution,
+              department: me.department,
+              level: me.academic_level,
+              role: (me.role === 'representative' ? 'rep' : me.role) as any,
+            }
+            saveUserProfile(updated)
+            setProfile((prev) => ({ ...prev, ...updated }))
+          }
+        } catch (e) {
+          console.warn('Could not fetch user profile:', e)
+        }
+      }
+
+      // Fetch enrolled courses
+      try {
+        const courses = await api.courses.getMyEnrolled()
+        setEnrolledCourses(courses || [])
+      } catch (e) {
+        try {
+          const all = await api.courses.getAll()
+          setEnrolledCourses(all ? all.slice(0, 4) : [])
+        } catch {
+          setEnrolledCourses([])
+        }
+      }
+
+      // Fetch announcements
+      try {
+        const anns = await api.announcements.getAll()
+        setAnnouncementsList(anns || [])
+      } catch (e) {
+        setAnnouncementsList([])
+      }
+
+      // Fetch timetable
+      try {
+        const slots = await api.timetable.getAll()
+        setTimetableSlots(slots || [])
+      } catch (e) {
+        setTimetableSlots([])
+      }
+
+      // Fetch marketplace
+      try {
+        const items = await api.marketplace.getAll()
+        setMarketItems(items || [])
+      } catch (e) {
+        setMarketItems([])
+      }
+
+      setLoading(false)
+    }
+
+    loadData()
 
     const handleProfileUpdate = () => setProfile(getUserProfile())
-    const handleCoursesUpdate = () => setEnrolledCourses(getEnrolledCourses())
-
     window.addEventListener('user-profile-updated', handleProfileUpdate)
-    window.addEventListener('enrolled-courses-updated', handleCoursesUpdate)
     return () => {
       window.removeEventListener('user-profile-updated', handleProfileUpdate)
-      window.removeEventListener('enrolled-courses-updated', handleCoursesUpdate)
     }
   }, [])
 
@@ -49,6 +122,9 @@ export default function DashboardOverviewPage() {
         .join('')
         .toUpperCase()
     : 'EU'
+
+  // Next lecture from timetable or first course
+  const nextLectureSlot = timetableSlots.find((s) => !s.is_personal) || timetableSlots[0]
 
   return (
     <>
@@ -72,7 +148,7 @@ export default function DashboardOverviewPage() {
       />
 
       {/* Course Configuration Alert */}
-      {mounted && enrolledCourses.length === 0 && (
+      {mounted && !loading && enrolledCourses.length === 0 && (
         <div className="course-config-jumbotron">
           <div className="jumbotron-content">
             <div className="jumbotron-text">
@@ -138,9 +214,9 @@ export default function DashboardOverviewPage() {
             <CalendarDays />
           </div>
           <div>
-            <span>Upcoming lectures</span>
-            <strong>{enrolledCourses.length === 0 ? 0 : 6}</strong>
-            <small>{enrolledCourses.length === 0 ? 'Enroll courses to activate' : 'Next one in 2 days'}</small>
+            <span>Upcoming timetable slots</span>
+            <strong>{timetableSlots.length}</strong>
+            <small>{timetableSlots.length === 0 ? 'No lectures today' : `${timetableSlots.length} items scheduled`}</small>
           </div>
         </div>
 
@@ -149,10 +225,10 @@ export default function DashboardOverviewPage() {
             <FileText />
           </div>
           <div>
-            <span>Pending assessments</span>
-            <strong>{enrolledCourses.length === 0 ? 0 : 3}</strong>
-            <small className="warning-text">
-              {enrolledCourses.length === 0 ? 'No assessments yet' : '1 due this week'}
+            <span>Announcements</span>
+            <strong>{announcementsList.length}</strong>
+            <small className={announcementsList.some((a) => !a.is_read) ? 'warning-text' : ''}>
+              {announcementsList.filter((a) => !a.is_read).length} unread updates
             </small>
           </div>
         </div>
@@ -185,26 +261,32 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
           <div className="announcement-list">
-            {announcements.map(([course, title, body, time, author, urgent]) => (
-              <article
-                className={`announcement ${urgent ? 'urgent' : ''}`}
-                key={String(title)}
-              >
-                <div className="announcement-icon">
-                  <Bell />
-                </div>
-                <div className="announcement-copy">
-                  <div className="announcement-meta">
-                    <Pill>{course}</Pill>
-                    {urgent && <Pill tone="urgent-pill">Urgent</Pill>}
-                    <span className="time">{time}</span>
+            {announcementsList.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                No announcements broadcasted yet.
+              </div>
+            ) : (
+              announcementsList.slice(0, 3).map((item) => (
+                <article
+                  className={`announcement ${item.is_urgent ? 'urgent' : ''}`}
+                  key={item.id}
+                >
+                  <div className="announcement-icon">
+                    <Bell />
                   </div>
-                  <h3>{title}</h3>
-                  <p>{body}</p>
-                  <span className="author">{author}</span>
-                </div>
-              </article>
-            ))}
+                  <div className="announcement-copy">
+                    <div className="announcement-meta">
+                      <Pill>{item.course_code}</Pill>
+                      {item.is_urgent && <Pill tone="urgent-pill">Urgent</Pill>}
+                      <span className="time">{new Date(item.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <h3>{item.title}</h3>
+                    <p>{item.body}</p>
+                    <span className="author">{item.author_name}</span>
+                  </div>
+                </article>
+              ))
+            )}
           </div>
         </Panel>
 
@@ -223,39 +305,45 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
 
-          <div className="lecture-card-body">
-            <div className="lecture-date">
-              <span>MON</span>
-              <strong>12</strong>
-              <small>OCT</small>
-            </div>
-            <div className="lecture-info">
-              <Pill>CSC 401</Pill>
-              <h3>Software Engineering</h3>
-              <div className="lecture-detail-row">
-                <Clock3 /> 10:00 AM – 12:00 PM
+          {nextLectureSlot ? (
+            <div className="lecture-card-body">
+              <div className="lecture-date">
+                <span>{nextLectureSlot.date.split(' ')[0] || 'CLASS'}</span>
+                <strong>{nextLectureSlot.date.split(' ')[1] || '01'}</strong>
+                <small>OCT</small>
               </div>
-              <div className="lecture-detail-row">
-                <MapPin /> Lecture Hall B
+              <div className="lecture-info">
+                <Pill>{nextLectureSlot.course_code || 'LECTURE'}</Pill>
+                <h3>{nextLectureSlot.title}</h3>
+                <div className="lecture-detail-row">
+                  <Clock3 /> {nextLectureSlot.time}
+                </div>
+                <div className="lecture-detail-row">
+                  <MapPin /> {nextLectureSlot.location || 'Lecture Hall'}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div style={{ padding: '36px 16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+              No upcoming lecture scheduled.
+            </div>
+          )}
 
           <div className="lecture-footer">
-            <span>Dr. Adaeze Okafor</span>
+            <span>{nextLectureSlot ? nextLectureSlot.course_code : 'Timetable clear'}</span>
             <Link href="/dashboard/calendar" className="text-button">
-              Add to calendar
+              View full timetable
             </Link>
           </div>
         </Panel>
       </div>
 
-      {/* Row 2: Upcoming Deadlines + My Courses + Marketplace (3 equal columns) */}
+      {/* Row 2: Upcoming Schedule + My Courses + Marketplace (3 equal columns) */}
       <div className="lower-grid">
         <Panel>
           <div className="panel-header">
             <div>
-              <h2>Upcoming deadlines</h2>
+              <h2>Upcoming timetable</h2>
               <p>Keep your momentum going</p>
             </div>
             <Link href="/dashboard/calendar" className="text-button">
@@ -263,22 +351,28 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
           <div className="deadline-list">
-            {upcomingDeadlines.map((d) => (
-              <div className="deadline" key={d.title}>
-                <div className="deadline-date">
-                  <strong>{d.day}</strong>
-                  <span>{d.month}</span>
-                </div>
-                <div className="deadline-info">
-                  <Pill>{d.course}</Pill>
-                  <h3>{d.title}</h3>
-                  <p>
-                    <Clock3 /> {d.due}
-                  </p>
-                </div>
-                <span className="status soon">{d.timeLeft}</span>
+            {timetableSlots.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                No events on your calendar yet.
               </div>
-            ))}
+            ) : (
+              timetableSlots.slice(0, 3).map((slot) => (
+                <div className="deadline" key={slot.id}>
+                  <div className="deadline-date">
+                    <strong>{slot.date.split(' ')[1] || '12'}</strong>
+                    <span>{slot.date.split(' ')[0] || 'DAY'}</span>
+                  </div>
+                  <div className="deadline-info">
+                    <Pill>{slot.course_code}</Pill>
+                    <h3>{slot.title}</h3>
+                    <p>
+                      <Clock3 /> {slot.time}
+                    </p>
+                  </div>
+                  <span className="status soon">{slot.location || 'Campus'}</span>
+                </div>
+              ))
+            )}
           </div>
         </Panel>
 
@@ -330,7 +424,7 @@ export default function DashboardOverviewPage() {
           ) : (
             <div className="course-list">
               {enrolledCourses.map((c) => (
-                <div className="course-row" key={c.code}>
+                <div className="course-row" key={c.id || c.code}>
                   <span
                     className="course-avatar"
                     style={{ background: c.color || '#4338ca', color: '#fff' }}
@@ -342,9 +436,8 @@ export default function DashboardOverviewPage() {
                     <span>{c.name}</span>
                   </div>
                   <div className="course-meta">
-                    {c.unread > 0 && <span className="unread">{c.unread}</span>}
                     <span className="course-next">
-                      <CalendarDays /> {c.next}
+                      <CalendarDays /> {c.next_lecture || 'Check timetable'}
                     </span>
                   </div>
                 </div>
@@ -364,32 +457,28 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
           <div className="marketplace-preview-list">
-            <Link
-              href="/dashboard/marketplace"
-              className="marketplace-preview-item"
-            >
-              <span className="market-preview-icon">
-                <BookOpen />
-              </span>
-              <div>
-                <strong>CSC 403 past questions</strong>
-                <small>Study materials · ₦2,500</small>
+            {marketItems.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                No marketplace listings yet.
               </div>
-              <ChevronRight />
-            </Link>
-            <Link
-              href="/dashboard/marketplace"
-              className="marketplace-preview-item"
-            >
-              <span className="market-preview-icon green">
-                <Store />
-              </span>
-              <div>
-                <strong>Scientific calculator</strong>
-                <small>Electronics · ₦8,000</small>
-              </div>
-              <ChevronRight />
-            </Link>
+            ) : (
+              marketItems.slice(0, 3).map((item) => (
+                <Link
+                  key={item.id}
+                  href="/dashboard/marketplace"
+                  className="marketplace-preview-item"
+                >
+                  <span className="market-preview-icon">
+                    <Store />
+                  </span>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <small>{item.tag} · {item.price}</small>
+                  </div>
+                  <ChevronRight />
+                </Link>
+              ))
+            )}
           </div>
         </Panel>
       </div>

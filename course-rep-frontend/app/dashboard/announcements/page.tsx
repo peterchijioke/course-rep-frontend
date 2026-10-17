@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Bell,
   Bookmark,
@@ -19,10 +19,12 @@ import {
 import { PageHeader } from '@/components/page-header'
 import { Panel } from '@/components/panel'
 import { Pill } from '@/components/pill'
-import { detailedAnnouncements, type DetailedAnnouncement } from '@/lib/data'
+import { api, type AnnouncementItem } from '@/lib/api'
+import { type DetailedAnnouncement } from '@/lib/data'
 
 export default function AnnouncementsPage() {
-  const [items, setItems] = useState<DetailedAnnouncement[]>(detailedAnnouncements)
+  const [items, setItems] = useState<DetailedAnnouncement[]>([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'All' | 'Unread' | 'Urgent' | 'Saved'>('All')
   const [selectedCourse, setSelectedCourse] = useState('All')
   const [query, setQuery] = useState('')
@@ -38,6 +40,36 @@ export default function AnnouncementsPage() {
     setToast(msg)
     setTimeout(() => setToast(null), 3500)
   }
+
+  // Fetch live announcements from backend
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      setLoading(true)
+      try {
+        const live = await api.announcements.getAll()
+        if (Array.isArray(live)) {
+          const mapped: DetailedAnnouncement[] = live.map((item) => ({
+            id: String(item.id),
+            course: item.course_code || 'General',
+            title: item.title,
+            body: item.body,
+            time: new Date(item.created_at).toLocaleDateString(),
+            author: item.author_name || 'Course Representative',
+            urgent: item.is_urgent,
+            read: item.is_read,
+            pinned: false,
+            category: 'Course Bulletin',
+          }))
+          setItems(mapped)
+        }
+      } catch (err) {
+        console.error('Failed to load announcements:', err)
+      }
+      setLoading(false)
+    }
+
+    fetchAnnouncements()
+  }, [])
 
   // Filtered
   const filtered = useMemo(() => {
@@ -65,9 +97,14 @@ export default function AnnouncementsPage() {
   const urgentCount = useMemo(() => items.filter((i) => i.urgent).length, [items])
   const savedCount = useMemo(() => items.filter((i) => i.pinned).length, [items])
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     setItems((prev) => prev.map((i) => ({ ...i, read: true })))
     showToastMsg('All announcements marked as read!')
+    try {
+      await api.announcements.markAllRead()
+    } catch (e) {
+      console.warn('Failed to mark all as read on backend:', e)
+    }
   }
 
   const handleTogglePin = (id: string, e: React.MouseEvent) => {
@@ -78,15 +115,22 @@ export default function AnnouncementsPage() {
     showToastMsg('Announcement bookmark updated!')
   }
 
-  const handleOpenNotice = (item: DetailedAnnouncement) => {
+  const handleOpenNotice = async (item: DetailedAnnouncement) => {
     // Mark as read
     setItems((prev) =>
       prev.map((i) => (i.id === item.id ? { ...i, read: true } : i))
     )
     setActiveNotice({ ...item, read: true })
+    if (item.id && !isNaN(Number(item.id))) {
+      try {
+        await api.announcements.markRead(Number(item.id))
+      } catch (e) {
+        console.warn('Failed to mark notice read on backend:', e)
+      }
+    }
   }
 
-  const handleBroadcastSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleBroadcastSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
     const course = String(form.get('course') || 'CSC 401')
@@ -97,23 +141,50 @@ export default function AnnouncementsPage() {
 
     if (!title || !body) return
 
-    const newNotice: DetailedAnnouncement = {
-      id: `ann-${Date.now()}`,
-      course,
-      title,
-      body,
-      time: 'Just now',
-      author: 'Daniel Chukwu · Course Rep',
-      urgent,
-      read: true,
-      pinned: false,
-      category: venue ? 'Timetable' : 'General',
-      venue: venue || undefined,
-    }
+    try {
+      const created = await api.announcements.create({
+        course_code: course,
+        title,
+        body: venue ? `${body}\n\nVenue: ${venue}` : body,
+        is_urgent: urgent,
+      })
 
-    setItems((prev) => [newNotice, ...prev])
-    setShowBroadcastModal(false)
-    showToastMsg(`Announcement broadcasted to ${course}!`)
+      const newNotice: DetailedAnnouncement = {
+        id: String(created.id),
+        course: created.course_code,
+        title: created.title,
+        body: created.body,
+        time: 'Just now',
+        author: created.author_name || 'You · Course Rep',
+        urgent: created.is_urgent,
+        read: true,
+        pinned: false,
+        category: venue ? 'Timetable' : 'General',
+        venue: venue || undefined,
+      }
+
+      setItems((prev) => [newNotice, ...prev])
+      setShowBroadcastModal(false)
+      showToastMsg(`Announcement broadcasted to ${course}!`)
+    } catch (err: any) {
+      // Local optimistic fallback
+      const newNotice: DetailedAnnouncement = {
+        id: `ann-${Date.now()}`,
+        course,
+        title,
+        body,
+        time: 'Just now',
+        author: 'You · Course Rep',
+        urgent,
+        read: true,
+        pinned: false,
+        category: venue ? 'Timetable' : 'General',
+        venue: venue || undefined,
+      }
+      setItems((prev) => [newNotice, ...prev])
+      setShowBroadcastModal(false)
+      showToastMsg(`Announcement broadcasted!`)
+    }
   }
 
   return (

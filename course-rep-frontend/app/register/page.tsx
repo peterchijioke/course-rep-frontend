@@ -7,6 +7,7 @@ import { ChevronRight } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { Pill } from '@/components/pill'
 import { loginUser } from '@/lib/auth'
+import { api } from '@/lib/api'
 import { saveUserProfile } from '@/lib/user-profile'
 
 export default function RegisterPage() {
@@ -14,24 +15,40 @@ export default function RegisterPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [role] = useState<'student' | 'rep'>('student')
+  const [role, setRole] = useState<'student' | 'rep'>('student')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [agreed, setAgreed] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    loginUser()
-    saveUserProfile({
-      name: name.trim() || 'Peter Chijioke',
-      email: email.trim() || 'peter.chijioke@example.edu.ng',
-      phone: phone.trim() || '+234 812 345 6789',
-      role,
-    })
-    router.push('/onboarding')
-    router.refresh()
+    setError(null)
+
+    try {
+      const res = await api.auth.register({
+        full_name: name.trim(),
+        email: email.trim(),
+        password,
+        role: role === 'rep' ? 'representative' : 'student',
+      })
+
+      loginUser(res.token)
+      saveUserProfile({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim() || '+234 812 345 6789',
+        role,
+      })
+
+      router.push('/onboarding')
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account')
+      setLoading(false)
+    }
   }
 
   return (
@@ -44,6 +61,20 @@ export default function RegisterPage() {
           <Pill>Tertiary Academic Command Centre</Pill>
           <h1>Create your account</h1>
           <p>Start staying informed about your academic journey and class schedule.</p>
+
+          {error && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#ef4444',
+              borderRadius: '8px',
+              padding: '10px 14px',
+              fontSize: '13px',
+              marginBottom: '16px',
+            }}>
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
 
