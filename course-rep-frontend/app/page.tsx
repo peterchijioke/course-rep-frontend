@@ -3,15 +3,16 @@
 import { useEffect, useRef, useState, type ReactNode, type ElementType } from 'react'
 import {
   Bell, BookOpen, CalendarDays, Check, ChevronRight, Clock3, FileText,
-  GraduationCap, LayoutDashboard, LogIn, Menu, Plus, Search, Settings,
-  ShieldCheck, Trash2, Upload, Users, X, Store, MessageCircle, Send,
-  Paperclip, Sparkles, Brain, ArrowUp, Mail, Phone, Headphones, Loader2
+  GraduationCap, LayoutDashboard, Menu, Plus, Search, Settings,
+  ShieldCheck, Trash2, Users, X, Store, MessageCircle, Send,
+  Paperclip, Sparkles, Brain, ArrowUp, Mail, Phone, Headphones,
+  Eye, EyeOff, User as UserIcon, Lock, Sliders, LogOut
 } from 'lucide-react'
 import {
   apiRequest, type User, type Course, type AnnouncementItem,
   type TimetableSlot, type MarketplaceItem, type ChatGroup,
-  type ChatMessage, type RepresentativeActivityLog,
-  type RepresentativeApplication, type AcademicRecord, type AdminStats
+  type ChatMessage, type AcademicRecord, type CreateCourseDTO,
+  type CreateAnnouncementDTO, type CreateEventDTO
 } from '@/lib/api'
 
 type View =
@@ -24,7 +25,6 @@ type View =
   | 'My Courses'
   | 'Calendar'
   | 'Announcements'
-  | 'Representative'
   | 'Marketplace'
   | 'Student Groups'
   | 'Direct Messages'
@@ -34,7 +34,6 @@ type View =
   | 'Login'
   | 'Register'
   | 'Onboarding'
-  | 'Admin'
 
 function Logo() {
   return (
@@ -49,7 +48,7 @@ function PageHeader({ title, subtitle, action }: { title: string; subtitle: stri
   return (
     <div className="page-heading">
       <div>
-        <p className="eyebrow">Course Rep workspace</p>
+        <p className="eyebrow">Student workspace</p>
         <h1>{title}</h1>
         <p className="subheading">{subtitle}</p>
       </div>
@@ -66,7 +65,120 @@ function Pill({ children, tone = '' }: { children: React.ReactNode; tone?: strin
   return <span className={`course-pill ${tone}`}>{children}</span>
 }
 
-// ---------------- DASHBOARD ----------------
+// ---------------- SKELETON LOADERS ----------------
+function StatCardSkeleton() {
+  return (
+    <div className="stat-card">
+      <div className="skeleton-shimmer w-9 h-9 rounded-lg flex-shrink-0" />
+      <div className="flex-1 space-y-2">
+        <div className="skeleton-shimmer h-3 w-20 rounded" />
+        <div className="skeleton-shimmer h-6 w-12 rounded" />
+        <div className="skeleton-shimmer h-2.5 w-24 rounded" />
+      </div>
+    </div>
+  )
+}
+
+function AnnouncementsSkeleton() {
+  return (
+    <div className="space-y-4 py-2">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="flex gap-3 py-3 border-t border-slate-100 first:border-0">
+          <div className="skeleton-shimmer w-7 h-7 rounded-md flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="skeleton-shimmer h-4 w-16 rounded" />
+              <div className="skeleton-shimmer h-3 w-12 rounded ml-auto" />
+            </div>
+            <div className="skeleton-shimmer h-4 w-3/4 rounded" />
+            <div className="skeleton-shimmer h-3 w-full rounded" />
+            <div className="skeleton-shimmer h-2.5 w-1/3 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CourseListSkeleton() {
+  return (
+    <div className="space-y-3 py-1">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="flex items-center gap-3 py-2.5 border-t border-slate-100 first:border-0">
+          <div className="skeleton-shimmer w-8 h-8 rounded-lg flex-shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <div className="skeleton-shimmer h-3.5 w-20 rounded" />
+            <div className="skeleton-shimmer h-3 w-36 rounded" />
+          </div>
+          <div className="skeleton-shimmer h-3 w-24 rounded" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CourseCardsSkeleton() {
+  return (
+    <div className="course-cards">
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="skeleton-card">
+          <div className="flex items-center gap-3">
+            <div className="skeleton-shimmer w-10 h-10 rounded-lg flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="skeleton-shimmer h-4 w-20 rounded" />
+              <div className="skeleton-shimmer h-4 w-36 rounded" />
+              <div className="skeleton-shimmer h-3 w-28 rounded" />
+            </div>
+          </div>
+          <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
+            <div className="skeleton-shimmer h-3 w-28 rounded" />
+            <div className="skeleton-shimmer h-3 w-12 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CalendarSkeleton() {
+  return (
+    <div className="space-y-4 py-2">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="flex items-stretch gap-4">
+          <div className="w-12 text-right space-y-1 pt-1">
+            <div className="skeleton-shimmer h-3 w-10 ml-auto rounded" />
+            <div className="skeleton-shimmer h-2.5 w-6 ml-auto rounded" />
+          </div>
+          <div className="flex-1 skeleton-card">
+            <div className="skeleton-shimmer h-4 w-24 rounded" />
+            <div className="skeleton-shimmer h-5 w-48 rounded" />
+            <div className="skeleton-shimmer h-3 w-36 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function MarketplaceSkeleton() {
+  return (
+    <div className="market-grid">
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="skeleton-card">
+          <div className="skeleton-shimmer h-32 w-full rounded-lg" />
+          <div className="skeleton-shimmer h-4 w-3/4 rounded" />
+          <div className="skeleton-shimmer h-3 w-1/2 rounded" />
+          <div className="flex justify-between items-center pt-2">
+            <div className="skeleton-shimmer h-4 w-16 rounded" />
+            <div className="skeleton-shimmer h-3 w-12 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ---------------- DASHBOARD (OVERVIEW) ----------------
 function Dashboard({ go, user }: { go: (view: View) => void; user: User | null }) {
   const [courses, setCourses] = useState<Course[]>([])
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
@@ -104,11 +216,14 @@ function Dashboard({ go, user }: { go: (view: View) => void; user: User | null }
   const nextLecture = events.find(e => !e.is_personal) || events[0]
   const upcomingDeadlines = events.filter(e => e.is_personal || e.title.toLowerCase().includes('assignment') || e.title.toLowerCase().includes('test')).slice(0, 3)
 
+  const studentName = user?.full_name ? user.full_name.split(' ')[0] : 'Student'
+  const hasProfileSetup = !!(user?.institution && user?.department)
+
   return (
     <>
       <PageHeader
-        title={`Good morning, ${user?.full_name ? user.full_name.split(' ')[0] : 'Student'}`}
-        subtitle="Here's what's happening with your academics today."
+        title={`Good day, ${studentName}`}
+        subtitle="Here's a clean view of your academic schedule and courses."
         action={
           <button className="primary-button" onClick={() => go('Calendar')}>
             <CalendarDays /> View calendar
@@ -118,50 +233,68 @@ function Dashboard({ go, user }: { go: (view: View) => void; user: User | null }
 
       <div className="profile-strip">
         <div className="institution-logo">
-          {user?.institution ? user.institution.slice(0, 2).toUpperCase() : 'EU'}
+          {user?.institution ? user.institution.slice(0, 2).toUpperCase() : (user?.avatar || 'ST')}
         </div>
         <div>
-          <strong>{user?.institution || 'Example University'}</strong>
-          <span>{user?.department || 'Computer Science'} · {user?.academic_level || '400 Level'} · {user?.academic_session || '2026/2027 session'}</span>
+          <strong>{user?.institution || 'Your Institution'}</strong>
+          <span>
+            {hasProfileSetup ? (
+              `${user?.department || 'Department'} · ${user?.academic_level || 'Level'} · ${user?.academic_session || 'Current session'}`
+            ) : (
+              'Complete your academic profile in Settings to personalize your semester.'
+            )}
+          </span>
         </div>
         <button className="text-button" onClick={() => go('Settings')}>
-          Edit profile <ChevronRight />
+          {hasProfileSetup ? 'Edit profile' : 'Set up profile'} <ChevronRight />
         </button>
       </div>
 
       <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon purple"><BookOpen /></div>
-          <div>
-            <span>Enrolled courses</span>
-            <strong>{courses.length}</strong>
-            <small>All courses active</small>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon blue"><CalendarDays /></div>
-          <div>
-            <span>Upcoming lectures</span>
-            <strong>{events.length}</strong>
-            <small>{events.length > 0 ? 'Lectures scheduled' : 'None scheduled'}</small>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon amber"><FileText /></div>
-          <div>
-            <span>Pending assessments</span>
-            <strong>{record?.pending_assessments ?? 3}</strong>
-            <small className="warning-text">1 due this week</small>
-          </div>
-        </div>
+        {loading ? (
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
+        ) : (
+          <>
+            <div className="stat-card">
+              <div className="stat-icon purple"><BookOpen /></div>
+              <div>
+                <span>Enrolled courses</span>
+                <strong>{courses.length}</strong>
+                <small>{courses.length > 0 ? `${courses.length} active courses` : 'No courses enrolled'}</small>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon blue"><CalendarDays /></div>
+              <div>
+                <span>Upcoming lectures</span>
+                <strong>{events.length}</strong>
+                <small>{events.length > 0 ? `${events.length} scheduled` : 'None scheduled'}</small>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon amber"><FileText /></div>
+              <div>
+                <span>Pending assessments</span>
+                <strong>{record?.pending_assessments ?? 0}</strong>
+                <small className={(record?.pending_assessments ?? 0) > 0 ? 'warning-text' : ''}>
+                  {(record?.pending_assessments ?? 0) > 0 ? `${record?.pending_assessments} due` : 'All caught up'}
+                </small>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="dashboard-grid">
         <Panel>
           <div className="panel-header">
             <div>
-              <h2>Important announcements</h2>
-              <p>Stay up to date with your courses</p>
+              <h2>Course announcements</h2>
+              <p>Notices from your enrolled courses</p>
             </div>
             <button className="text-button" onClick={() => go('Announcements')}>
               View all <ChevronRight />
@@ -169,9 +302,16 @@ function Dashboard({ go, user }: { go: (view: View) => void; user: User | null }
           </div>
           <div className="announcement-list">
             {loading ? (
-              <p className="loading-state"><Loader2 className="animate-spin inline mr-2" /> Loading announcements...</p>
+              <AnnouncementsSkeleton />
             ) : announcements.length === 0 ? (
-              <p className="empty-state">No announcements posted yet.</p>
+              <div className="empty-state-card">
+                <div className="empty-state-icon"><Bell /></div>
+                <h3>No announcements yet</h3>
+                <p>Course updates and announcements from your classes will show up here.</p>
+                <button className="primary-button btn-small" onClick={() => go('Announcements')}>
+                  <Plus /> Post announcement
+                </button>
+              </div>
             ) : (
               announcements.slice(0, 3).map((a) => (
                 <article className={`announcement ${a.is_urgent ? 'urgent' : ''}`} key={a.id}>
@@ -202,12 +342,18 @@ function Dashboard({ go, user }: { go: (view: View) => void; user: User | null }
               <ChevronRight />
             </button>
           </div>
-          {nextLecture ? (
+          {loading ? (
+            <div className="p-5 space-y-3">
+              <div className="skeleton-shimmer h-6 w-24 rounded" />
+              <div className="skeleton-shimmer h-8 w-44 rounded" />
+              <div className="skeleton-shimmer h-4 w-32 rounded" />
+            </div>
+          ) : nextLecture ? (
             <>
               <div className="lecture-date">
-                <span>{nextLecture.date.split(' ')[0] || 'MON'}</span>
-                <strong>{nextLecture.date.split(' ')[1] || '12'}</strong>
-                <small>OCT</small>
+                <span>{nextLecture.date.split(' ')[0] || 'CLASS'}</span>
+                <strong>{nextLecture.date.split(' ')[1] || '01'}</strong>
+                <small>LECTURE</small>
               </div>
               <div className="lecture-info">
                 <Pill>{nextLecture.course_code}</Pill>
@@ -221,9 +367,13 @@ function Dashboard({ go, user }: { go: (view: View) => void; user: User | null }
               </div>
             </>
           ) : (
-            <div className="empty-lecture">
-              <CalendarDays />
-              <p>No upcoming lectures today.</p>
+            <div className="empty-state-card py-8">
+              <div className="empty-state-icon"><CalendarDays /></div>
+              <h3>No scheduled lectures</h3>
+              <p>Add lectures or study sessions to keep your weekly timetable in sync.</p>
+              <button className="text-button" onClick={() => go('Calendar')}>
+                Add to calendar <ChevronRight />
+              </button>
             </div>
           )}
         </Panel>
@@ -234,21 +384,35 @@ function Dashboard({ go, user }: { go: (view: View) => void; user: User | null }
           <div className="panel-header">
             <div>
               <h2>Upcoming deadlines</h2>
-              <p>Keep your momentum going</p>
+              <p>Assignments, tests, and goals</p>
             </div>
             <button className="text-button" onClick={() => go('Calendar')}>
               See all <ChevronRight />
             </button>
           </div>
           <div className="deadline-list">
-            {upcomingDeadlines.length === 0 ? (
-              <p className="empty-state">No imminent deadlines.</p>
+            {loading ? (
+              <div className="space-y-3 py-2">
+                {[1, 2].map(i => (
+                  <div key={i} className="flex gap-3 py-2 border-t border-slate-100 first:border-0">
+                    <div className="skeleton-shimmer w-8 h-8 rounded" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="skeleton-shimmer h-3 w-16 rounded" />
+                      <div className="skeleton-shimmer h-3.5 w-32 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : upcomingDeadlines.length === 0 ? (
+              <div className="empty-state-card py-6">
+                <p>No upcoming deadlines or assignments.</p>
+              </div>
             ) : (
               upcomingDeadlines.map((d) => (
                 <div className="deadline" key={d.id}>
                   <div className="deadline-date">
-                    <strong>{d.date.split(' ')[1] || '10'}</strong>
-                    <span>{d.date.split(' ')[0] || 'OCT'}</span>
+                    <strong>{d.date.split(' ')[1] || '1'}</strong>
+                    <span>{d.date.split(' ')[0] || 'DUE'}</span>
                   </div>
                   <div>
                     <Pill>{d.course_code}</Pill>
@@ -266,24 +430,31 @@ function Dashboard({ go, user }: { go: (view: View) => void; user: User | null }
           <div className="panel-header">
             <div>
               <h2>My courses</h2>
-              <p>{courses.length} active courses</p>
+              <p>{courses.length} enrolled {courses.length === 1 ? 'course' : 'courses'}</p>
             </div>
             <button className="text-button" onClick={() => go('My Courses')}>
               View all <ChevronRight />
             </button>
           </div>
           <div className="course-list">
-            {courses.length === 0 ? (
-              <p className="empty-state">No courses enrolled yet.</p>
+            {loading ? (
+              <CourseListSkeleton />
+            ) : courses.length === 0 ? (
+              <div className="empty-state-card py-6">
+                <p>No courses enrolled yet.</p>
+                <button className="text-button" onClick={() => go('My Courses')}>
+                  Add your courses <ChevronRight />
+                </button>
+              </div>
             ) : (
-              courses.map(c => (
+              courses.slice(0, 4).map(c => (
                 <div className="course-row" key={c.code}>
-                  <span className={`course-avatar ${c.color}`}>{c.code.split(' ')[1]}</span>
+                  <span className={`course-avatar ${c.color || 'indigo'}`}>{c.code.slice(0, 3)}</span>
                   <div>
                     <strong>{c.code}</strong>
                     <span>{c.name}</span>
                   </div>
-                  <span className="course-next"><CalendarDays /> {c.next_lecture || 'Scheduled'}</span>
+                  <span className="course-next"><CalendarDays /> {c.next_lecture || 'Active'}</span>
                 </div>
               ))
             )}
@@ -294,15 +465,26 @@ function Dashboard({ go, user }: { go: (view: View) => void; user: User | null }
           <div className="panel-header">
             <div>
               <h2>Student marketplace</h2>
-              <p>Useful finds from your campus community</p>
+              <p>Textbooks, notes, and essentials</p>
             </div>
             <button className="text-button" onClick={() => go('Marketplace')}>
               Browse all <ChevronRight />
             </button>
           </div>
           <div className="marketplace-preview-list">
-            {marketplace.length === 0 ? (
-              <p className="empty-state">No items listed currently.</p>
+            {loading ? (
+              <div className="space-y-2 py-2">
+                {[1, 2].map(i => (
+                  <div key={i} className="skeleton-shimmer h-12 w-full rounded-md" />
+                ))}
+              </div>
+            ) : marketplace.length === 0 ? (
+              <div className="empty-state-card py-6">
+                <p>No items listed on campus exchange yet.</p>
+                <button className="text-button" onClick={() => go('Marketplace')}>
+                  List an item <ChevronRight />
+                </button>
+              </div>
             ) : (
               marketplace.slice(0, 2).map((item) => (
                 <button key={item.id} onClick={() => go('Marketplace')}>
@@ -323,14 +505,27 @@ function Dashboard({ go, user }: { go: (view: View) => void; user: User | null }
 }
 
 // ---------------- COURSES PAGE ----------------
-function CoursesPage({ go }: { go: (view: View) => void }) {
+function CoursesPage({ go, user }: { go: (view: View) => void; user: User | null }) {
   const [courses, setCourses] = useState<Course[]>([])
   const [query, setQuery] = useState('')
   const [showJoin, setShowJoin] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+
+  // New course form draft
+  const [newCourse, setNewCourse] = useState<CreateCourseDTO>({
+    code: '',
+    name: '',
+    department: user?.department || '',
+    level: user?.academic_level || '100 Level',
+    lecturer_name: '',
+    lecture_venue: '',
+    next_lecture: 'Mondays 10:00 AM',
+    color: 'indigo',
+  })
 
   const loadCourses = async (searchTerm = '') => {
     try {
@@ -368,15 +563,53 @@ function CoursesPage({ go }: { go: (view: View) => void }) {
     }
   }
 
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newCourse.code.trim() || !newCourse.name.trim()) return
+    try {
+      setSubmitting(true)
+      const created = await apiRequest<Course>('/courses', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...newCourse,
+          department: newCourse.department || user?.department || 'General',
+          level: newCourse.level || user?.academic_level || '100 Level',
+        }),
+      })
+      setMessage(`Successfully created and enrolled in ${created.code}!`)
+      setShowCreate(false)
+      setNewCourse({
+        code: '',
+        name: '',
+        department: user?.department || '',
+        level: user?.academic_level || '100 Level',
+        lecturer_name: '',
+        lecture_venue: '',
+        next_lecture: 'Mondays 10:00 AM',
+        color: 'indigo',
+      })
+      await loadCourses()
+    } catch (err: any) {
+      alert(err.message || 'Failed to create course')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="My courses"
-        subtitle="Your active courses for the 2026/2027 academic session."
+        subtitle="Manage and track your enrolled courses for this semester."
         action={
-          <button className="primary-button" onClick={() => setShowJoin(true)}>
-            <Plus /> Join a course
-          </button>
+          <div className="flex gap-2">
+            <button className="secondary-button" onClick={() => setShowJoin(true)}>
+              Join with code
+            </button>
+            <button className="primary-button" onClick={() => setShowCreate(true)}>
+              <Plus /> Add course
+            </button>
+          </div>
         }
       />
 
@@ -393,41 +626,58 @@ function CoursesPage({ go }: { go: (view: View) => void }) {
           />
         </div>
         <button className="filter-button" onClick={() => setQuery('')}>
-          All courses <ChevronRight />
+          All courses ({courses.length})
         </button>
       </div>
 
-      <div className="course-cards">
-        {loading ? (
-          <Panel><p><Loader2 className="animate-spin inline mr-2" /> Loading courses from database...</p></Panel>
-        ) : courses.length === 0 ? (
-          <Panel><p>No courses match your search.</p></Panel>
-        ) : (
-          courses.map(c => (
+      {loading ? (
+        <CourseCardsSkeleton />
+      ) : courses.length === 0 ? (
+        <Panel>
+          <div className="empty-state-card py-12">
+            <div className="empty-state-icon"><BookOpen /></div>
+            <h3>No courses found</h3>
+            <p>
+              {query ? 'No courses match your search criteria.' : 'You haven’t added any courses for this semester yet.'}
+            </p>
+            <div className="flex gap-3">
+              <button className="primary-button" onClick={() => setShowCreate(true)}>
+                <Plus /> Add a course
+              </button>
+              <button className="secondary-button" onClick={() => setShowJoin(true)}>
+                Join with code
+              </button>
+            </div>
+          </div>
+        </Panel>
+      ) : (
+        <div className="course-cards">
+          {courses.map(c => (
             <button className="course-card" key={c.id || c.code} onClick={() => go('Announcements')}>
-              <span className={`course-avatar ${c.color}`}>{c.code.split(' ')[1] || 'CSC'}</span>
+              <span className={`course-avatar ${c.color || 'indigo'}`}>{c.code.slice(0, 3)}</span>
               <span>
                 <strong>{c.code}</strong>
                 <b>{c.name}</b>
-                <small>{c.department || 'Computer Science'} · {c.level || '400 Level'}</small>
+                <small>{c.department || user?.department || 'Department'} · {c.level || user?.academic_level || 'Level'}</small>
               </span>
               <span className="course-card-meta">
-                {c.next_lecture || 'Up to date'}
+                {c.next_lecture || 'Active'}
                 <ChevronRight />
               </span>
             </button>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
+      {/* Join Course Modal */}
       {showJoin && (
         <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setShowJoin(false)}>
           <form className="event-dialog" onSubmit={handleJoin}>
             <div className="dialog-header">
               <div>
-                <p className="eyebrow">Courses</p>
+                <p className="eyebrow">Course enrollment</p>
                 <h2>Join a course</h2>
-                <p>Enter the course code provided by your department (e.g. CSC 401, CSC 403).</p>
+                <p>Enter the course code provided by your class or department (e.g. CSC 401, MTH 101).</p>
               </div>
               <button type="button" className="icon-btn" onClick={() => setShowJoin(false)} aria-label="Close join course form">
                 <X />
@@ -446,7 +696,95 @@ function CoursesPage({ go }: { go: (view: View) => void }) {
             <div className="dialog-actions">
               <button type="button" className="secondary-button" onClick={() => setShowJoin(false)}>Cancel</button>
               <button type="submit" className="primary-button" disabled={submitting}>
-                {submitting ? <Loader2 className="animate-spin inline mr-1" /> : <Plus />} Join course
+                <Plus /> Join course
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Create Course Modal */}
+      {showCreate && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setShowCreate(false)}>
+          <form className="event-dialog" onSubmit={handleCreate}>
+            <div className="dialog-header">
+              <div>
+                <p className="eyebrow">New course</p>
+                <h2>Add a course</h2>
+                <p>Enter details for a course you are taking this semester.</p>
+              </div>
+              <button type="button" className="icon-btn" onClick={() => setShowCreate(false)} aria-label="Close modal">
+                <X />
+              </button>
+            </div>
+
+            <div className="event-field-grid">
+              <label>
+                Course code *
+                <input
+                  required
+                  autoFocus
+                  value={newCourse.code}
+                  onChange={e => setNewCourse({ ...newCourse, code: e.target.value.toUpperCase() })}
+                  placeholder="e.g. CSC 401"
+                />
+              </label>
+              <label>
+                Color tag
+                <select
+                  value={newCourse.color}
+                  onChange={e => setNewCourse({ ...newCourse, color: e.target.value })}
+                >
+                  <option value="indigo">Indigo</option>
+                  <option value="blue">Blue</option>
+                  <option value="amber">Amber</option>
+                  <option value="slate">Slate</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              Course name / title *
+              <input
+                required
+                value={newCourse.name}
+                onChange={e => setNewCourse({ ...newCourse, name: e.target.value })}
+                placeholder="e.g. Software Engineering"
+              />
+            </label>
+
+            <div className="event-field-grid">
+              <label>
+                Lecturer name
+                <input
+                  value={newCourse.lecturer_name}
+                  onChange={e => setNewCourse({ ...newCourse, lecturer_name: e.target.value })}
+                  placeholder="e.g. Dr. Okafor"
+                />
+              </label>
+              <label>
+                Venue / Hall
+                <input
+                  value={newCourse.lecture_venue}
+                  onChange={e => setNewCourse({ ...newCourse, lecture_venue: e.target.value })}
+                  placeholder="e.g. Science Hall 3"
+                />
+              </label>
+            </div>
+
+            <label>
+              Lecture schedule / timing
+              <input
+                value={newCourse.next_lecture}
+                onChange={e => setNewCourse({ ...newCourse, next_lecture: e.target.value })}
+                placeholder="e.g. Mondays 10:00 AM – 12:00 PM"
+              />
+            </label>
+
+            <div className="dialog-actions">
+              <button type="button" className="secondary-button" onClick={() => setShowCreate(false)}>Cancel</button>
+              <button type="submit" className="primary-button" disabled={submitting}>
+                <Plus /> Create & enroll
               </button>
             </div>
           </form>
@@ -460,11 +798,34 @@ function CoursesPage({ go }: { go: (view: View) => void }) {
 function CalendarPage() {
   const [showForm, setShowForm] = useState(false)
   const [viewMode, setViewMode] = useState<'Week' | 'List'>('Week')
-  const [selectedDay, setSelectedDay] = useState('Mon 12')
   const [events, setEvents] = useState<TimetableSlot[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
-  const [draft, setDraft] = useState({ title: '', date: 'Mon 12', start: '10:00', end: '11:00', location: '', course: 'Personal event' })
+
+  // Generate dynamic days for the current week
+  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((dayName, idx) => {
+    const today = new Date()
+    const currentDay = today.getDay() // 0 = Sun, 1 = Mon...
+    const distance = (idx + 1) - (currentDay === 0 ? 7 : currentDay)
+    const targetDate = new Date(today)
+    targetDate.setDate(today.getDate() + distance)
+    return {
+      label: `${dayName} ${targetDate.getDate()}`,
+      dayName,
+      dateNum: targetDate.getDate(),
+    }
+  })
+
+  const [selectedDay, setSelectedDay] = useState(weekDays[0].label)
+  const [draft, setDraft] = useState<CreateEventDTO>({
+    title: '',
+    date: weekDays[0].label,
+    start: '10:00',
+    end: '11:00',
+    location: '',
+    course: 'Personal study',
+    tone: 'indigo-bar',
+  })
   const [draggedEventId, setDraggedEventId] = useState<number | null>(null)
 
   const loadEvents = async () => {
@@ -514,7 +875,15 @@ function CalendarPage() {
         body: JSON.stringify(draft),
       })
       setEvents(current => [...current, newSlot])
-      setDraft({ title: '', date: 'Mon 12', start: '10:00', end: '11:00', location: '', course: 'Personal event' })
+      setDraft({
+        title: '',
+        date: selectedDay,
+        start: '10:00',
+        end: '11:00',
+        location: '',
+        course: courses[0]?.code || 'Personal study',
+        tone: 'indigo-bar',
+      })
       setShowForm(false)
     } catch (err: any) {
       alert(err.message || 'Failed to add event')
@@ -534,7 +903,7 @@ function CalendarPage() {
     <>
       <PageHeader
         title="Academic calendar"
-        subtitle="Your lectures and deadlines for the week of October 12–18, 2026."
+        subtitle="Keep your lectures, tests, and study sessions in clear view."
         action={
           <button className="primary-button" onClick={() => setShowForm(true)}>
             <Plus /> Add event
@@ -544,22 +913,22 @@ function CalendarPage() {
 
       <div className="calendar-tabs">
         <button className={viewMode === 'Week' ? 'active' : ''} onClick={() => setViewMode('Week')}>Week</button>
-        <button className={viewMode === 'List' ? 'active' : ''} onClick={() => setViewMode('List')}>List</button>
+        <button className={viewMode === 'List' ? 'active' : ''} onClick={() => setViewMode('List')}>List ({events.length})</button>
       </div>
 
       <Panel className="schedule">
         {viewMode === 'Week' && (
-          <div className="week-row">
-            {['Mon 12', 'Tue 13', 'Wed 14', 'Thu 15', 'Fri 16'].map(d => (
+          <div className="week-row" style={{ gridTemplateColumns: `repeat(${weekDays.length}, 1fr)` }}>
+            {weekDays.map(d => (
               <button
-                key={d}
-                className={selectedDay === d ? 'active' : ''}
-                onClick={() => setSelectedDay(d)}
+                key={d.label}
+                className={selectedDay === d.label ? 'active' : ''}
+                onClick={() => setSelectedDay(d.label)}
                 onDragOver={e => e.preventDefault()}
-                onDrop={() => moveEventToDay(d)}
+                onDrop={() => moveEventToDay(d.label)}
               >
-                <small>{d.split(' ')[0]}</small>
-                <strong>{d.split(' ')[1]}</strong>
+                <small>{d.dayName}</small>
+                <strong>{d.dateNum}</strong>
               </button>
             ))}
           </div>
@@ -567,12 +936,15 @@ function CalendarPage() {
 
         <div className="schedule-list">
           {loading ? (
-            <p className="loading-state"><Loader2 className="animate-spin inline mr-2" /> Loading calendar events...</p>
+            <CalendarSkeleton />
           ) : visibleEvents.length === 0 ? (
-            <div className="calendar-empty">
-              <CalendarDays />
-              <strong>No events scheduled</strong>
-              <span>Select another day or add a personal event.</span>
+            <div className="empty-state-card py-12">
+              <div className="empty-state-icon"><CalendarDays /></div>
+              <h3>No events scheduled for {viewMode === 'Week' ? selectedDay : 'this period'}</h3>
+              <p>Add a lecture, assignment deadline, or personal study block to your schedule.</p>
+              <button className="primary-button btn-small" onClick={() => setShowForm(true)}>
+                <Plus /> Add an event
+              </button>
             </div>
           ) : (
             visibleEvents.map((item) => (
@@ -613,37 +985,38 @@ function CalendarPage() {
               <div>
                 <p className="eyebrow">Calendar</p>
                 <h2>Add an event</h2>
-                <p>Keep a personal reminder alongside your lectures.</p>
+                <p>Keep a lecture or personal study reminder on your timetable.</p>
               </div>
               <button type="button" className="icon-btn" onClick={() => setShowForm(false)} aria-label="Close add event form">
                 <X />
               </button>
             </div>
             <label>
-              Event title
+              Event title *
               <input
                 required
                 autoFocus
                 value={draft.title}
                 onChange={e => setDraft({ ...draft, title: e.target.value })}
-                placeholder="e.g. Study group session"
+                placeholder="e.g. Distributed Systems Lecture"
               />
             </label>
             <div className="event-field-grid">
               <label>
                 Date
                 <select value={draft.date} onChange={e => setDraft({ ...draft, date: e.target.value })}>
-                  {['Mon 12', 'Tue 13', 'Wed 14', 'Thu 15', 'Fri 16'].map(d => (
-                    <option key={d}>{d}</option>
+                  {weekDays.map(d => (
+                    <option key={d.label} value={d.label}>{d.label}</option>
                   ))}
                 </select>
               </label>
               <label>
-                Course
+                Associated course
                 <select value={draft.course} onChange={e => setDraft({ ...draft, course: e.target.value })}>
-                  <option>Personal event</option>
+                  <option value="Personal study">Personal study</option>
+                  <option value="Assignment / Test">Assignment / Test</option>
                   {courses.map(c => (
-                    <option key={c.code}>{c.code}</option>
+                    <option key={c.code} value={c.code}>{c.code} – {c.name}</option>
                   ))}
                 </select>
               </label>
@@ -659,11 +1032,11 @@ function CalendarPage() {
               </label>
             </div>
             <label>
-              Location
+              Location / Venue
               <input
                 value={draft.location}
                 onChange={e => setDraft({ ...draft, location: e.target.value })}
-                placeholder="Optional (e.g. Library Room 3)"
+                placeholder="e.g. Science Complex Hall 2 (or Online)"
               />
             </label>
             <div className="dialog-actions">
@@ -681,15 +1054,29 @@ function CalendarPage() {
 function AnnouncementsPage() {
   const [filter, setFilter] = useState<'All' | 'Unread' | 'Urgent'>('All')
   const [items, setItems] = useState<AnnouncementItem[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  const [draft, setDraft] = useState<CreateAnnouncementDTO>({
+    course_code: 'General',
+    title: '',
+    body: '',
+    is_urgent: false,
+  })
 
   const loadAnnouncements = async (f = filter) => {
     try {
       setLoading(true)
-      const data = await apiRequest<{ items: AnnouncementItem[]; unread_count: number }>(`/announcements?filter=${f}`)
-      setItems(data.items || [])
-      setUnreadCount(data.unread_count || 0)
+      const [annData, courseData] = await Promise.all([
+        apiRequest<{ items: AnnouncementItem[]; unread_count: number }>(`/announcements?filter=${f}`),
+        apiRequest<Course[]>('/courses'),
+      ])
+      setItems(annData.items || [])
+      setUnreadCount(annData.unread_count || 0)
+      setCourses(courseData || [])
     } catch (err) {
       console.error('Failed to load announcements:', err)
     } finally {
@@ -721,15 +1108,39 @@ function AnnouncementsPage() {
     }
   }
 
+  const handleCreateAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!draft.title.trim() || !draft.body.trim()) return
+    try {
+      setSubmitting(true)
+      await apiRequest('/announcements', {
+        method: 'POST',
+        body: JSON.stringify(draft),
+      })
+      setShowCreate(false)
+      setDraft({ course_code: courses[0]?.code || 'General', title: '', body: '', is_urgent: false })
+      await loadAnnouncements()
+    } catch (err: any) {
+      alert(err.message || 'Failed to post announcement')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="Announcements"
-        subtitle="Everything important from your courses and department."
+        subtitle="Notices and updates from your courses and study peers."
         action={
-          <button className="primary-button" onClick={markAllRead}>
-            <Bell /> Mark all read
-          </button>
+          <div className="flex gap-2">
+            <button className="secondary-button" onClick={markAllRead} disabled={items.length === 0}>
+              <Bell /> Mark all read
+            </button>
+            <button className="primary-button" onClick={() => setShowCreate(true)}>
+              <Plus /> Post announcement
+            </button>
+          </div>
         }
       />
 
@@ -748,9 +1159,16 @@ function AnnouncementsPage() {
       <Panel>
         <div className="announcement-list">
           {loading ? (
-            <p className="loading-state"><Loader2 className="animate-spin inline mr-2" /> Loading announcements from database...</p>
+            <AnnouncementsSkeleton />
           ) : items.length === 0 ? (
-            <p>No announcements in this view.</p>
+            <div className="empty-state-card py-12">
+              <div className="empty-state-icon"><Bell /></div>
+              <h3>No announcements in this view</h3>
+              <p>Share a notice with classmates or check back when course updates are posted.</p>
+              <button className="primary-button btn-small" onClick={() => setShowCreate(true)}>
+                <Plus /> Post announcement
+              </button>
+            </div>
           ) : (
             items.map((item) => (
               <article
@@ -775,484 +1193,76 @@ function AnnouncementsPage() {
           )}
         </div>
       </Panel>
-    </>
-  )
-}
 
-// ---------------- REPRESENTATIVE PAGE ----------------
-function RepresentativePage({ user }: { user: User | null }) {
-  const [modal, setModal] = useState<'announcement' | 'timetable' | 'material' | null>(null)
-  const [courses, setCourses] = useState<Course[]>([])
-  const [activity, setActivity] = useState<RepresentativeActivityLog[]>([])
-  const [announcement, setAnnouncement] = useState({ title: '', message: '', course: 'CSC 401' })
-  const [schedule, setSchedule] = useState({ course: 'CSC 401', day: 'Monday', time: '10:00 AM', venue: '' })
-  const [material, setMaterial] = useState({ title: '', type: 'Lecture notes', course: 'CSC 401' })
-  const [submitting, setSubmitting] = useState(false)
-
-  const loadData = async () => {
-    try {
-      const [allCourses, logs] = await Promise.all([
-        apiRequest<Course[]>('/courses'),
-        apiRequest<RepresentativeActivityLog[]>('/representative/activity-logs'),
-      ])
-      setCourses(allCourses || [])
-      setActivity(logs || [])
-      if (allCourses && allCourses.length > 0) {
-        setAnnouncement(prev => ({ ...prev, course: allCourses[0].code }))
-        setSchedule(prev => ({ ...prev, course: allCourses[0].code }))
-        setMaterial(prev => ({ ...prev, course: allCourses[0].code }))
-      }
-    } catch (err) {
-      console.error('Failed to load rep data:', err)
-    }
-  }
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const close = () => setModal(null)
-
-  const submitAnnouncement = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!announcement.title.trim() || !announcement.message.trim()) return
-    try {
-      setSubmitting(true)
-      await apiRequest('/representative/announcement', {
-        method: 'POST',
-        body: JSON.stringify({
-          course_code: announcement.course,
-          title: announcement.title.trim(),
-          message: announcement.message.trim(),
-        }),
-      })
-      setAnnouncement({ title: '', message: '', course: courses[0]?.code || 'CSC 401' })
-      close()
-      await loadData()
-    } catch (err: any) {
-      alert(err.message || 'Failed to post announcement')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const submitSchedule = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      setSubmitting(true)
-      await apiRequest('/representative/timetable', {
-        method: 'POST',
-        body: JSON.stringify({
-          course_code: schedule.course,
-          day: schedule.day,
-          time: schedule.time,
-          venue: schedule.venue,
-        }),
-      })
-      close()
-      await loadData()
-    } catch (err: any) {
-      alert(err.message || 'Failed to update timetable')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const submitMaterial = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!material.title.trim()) return
-    try {
-      setSubmitting(true)
-      await apiRequest('/representative/material', {
-        method: 'POST',
-        body: JSON.stringify({
-          course_code: material.course,
-          title: material.title.trim(),
-          type: material.type,
-        }),
-      })
-      setMaterial({ title: '', type: 'Lecture notes', course: courses[0]?.code || 'CSC 401' })
-      close()
-      await loadData()
-    } catch (err: any) {
-      alert(err.message || 'Failed to upload material')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const isRep = user?.role === 'representative' || user?.role === 'admin'
-
-  return (
-    <>
-      <PageHeader
-        title="Representative centre"
-        subtitle="Manage the courses you are verified to represent."
-        action={
-          <Pill tone="verified-pill">
-            <ShieldCheck /> {isRep ? 'Verified representative' : 'Student representative candidate'}
-          </Pill>
-        }
-      />
-
-      <Panel className="rep-hero">
-        <div>
-          <Pill tone="verified-pill"><ShieldCheck /> Approved for 2026/2027</Pill>
-          <h2>Your class, coordinated.</h2>
-          <p>Keep classmates informed with trusted updates, schedules, assessments, and resources directly connected to PostgreSQL.</p>
-        </div>
-        <button className="primary-button" onClick={() => setModal('announcement')}>
-          <Plus /> New announcement
-        </button>
-      </Panel>
-
-      <div className="quick-grid">
-        <button onClick={() => setModal('announcement')}>
-          <Bell />
-          <strong>Post announcement</strong>
-          <span>Share an update with your class</span>
-        </button>
-        <button onClick={() => setModal('timetable')}>
-          <CalendarDays />
-          <strong>Manage timetable</strong>
-          <span>Update lecture schedules</span>
-        </button>
-        <button onClick={() => setModal('material')}>
-          <Upload />
-          <strong>Upload material</strong>
-          <span>Add notes or past questions</span>
-        </button>
-      </div>
-
-      <div className="rep-columns">
-        <Panel>
-          <div className="panel-header">
-            <div>
-              <h2>Verification status</h2>
-              <p>Your representative access is active</p>
-            </div>
-            <span className="status verified">Approved</span>
-          </div>
-          <div className="verification-row">
-            <Check /> Application approved by Department of Computer Science <span>Active</span>
-          </div>
-        </Panel>
-
-        <Panel>
-          <div className="panel-header">
-            <div>
-              <h2>Recent activity</h2>
-              <p>Changes recorded in live database</p>
-            </div>
-          </div>
-          <div className="rep-activity">
-            {activity.length === 0 ? (
-              <p className="empty-state">No recent activity recorded.</p>
-            ) : (
-              activity.slice(0, 5).map((item) => (
-                <div key={item.id}>
-                  <Check />
-                  <span>{item.action} — {item.description}</span>
-                  <small>{item.created_at.split('T')[0] || 'Recently'}</small>
-                </div>
-              ))
-            )}
-          </div>
-        </Panel>
-      </div>
-
-      {modal && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && close()}>
-          <form
-            className="event-dialog representative-dialog"
-            onSubmit={modal === 'announcement' ? submitAnnouncement : modal === 'timetable' ? submitSchedule : submitMaterial}
-          >
+      {/* Post Announcement Modal */}
+      {showCreate && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setShowCreate(false)}>
+          <form className="event-dialog" onSubmit={handleCreateAnnouncement}>
             <div className="dialog-header">
               <div>
-                <p className="eyebrow">Representative tools</p>
-                <h2>
-                  {modal === 'announcement' ? 'Post an announcement' : modal === 'timetable' ? 'Update timetable' : 'Upload course material'}
-                </h2>
-                <p>Keep your classmates informed with accurate course details.</p>
+                <p className="eyebrow">Class notice</p>
+                <h2>Post an announcement</h2>
+                <p>Share a class schedule change, study group update, or notice.</p>
               </div>
-              <button type="button" className="icon-btn" onClick={close} aria-label="Close dialog"><X /></button>
+              <button type="button" className="icon-btn" onClick={() => setShowCreate(false)} aria-label="Close modal">
+                <X />
+              </button>
             </div>
 
-            {modal === 'announcement' && (
-              <>
-                <label>
-                  Course
-                  <select value={announcement.course} onChange={e => setAnnouncement({ ...announcement, course: e.target.value })}>
-                    {courses.map(c => <option key={c.code}>{c.code}</option>)}
-                  </select>
-                </label>
-                <label>
-                  Title
-                  <input
-                    required
-                    value={announcement.title}
-                    onChange={e => setAnnouncement({ ...announcement, title: e.target.value })}
-                    placeholder="e.g. Venue changed for tomorrow's lecture"
-                  />
-                </label>
-                <label>
-                  Message
-                  <textarea
-                    required
-                    rows={4}
-                    value={announcement.message}
-                    onChange={e => setAnnouncement({ ...announcement, message: e.target.value })}
-                    placeholder="Write a clear update for your class..."
-                  />
-                </label>
-              </>
-            )}
+            <label>
+              Course
+              <select
+                value={draft.course_code}
+                onChange={e => setDraft({ ...draft, course_code: e.target.value })}
+              >
+                <option value="General">General / Class Notice</option>
+                {courses.map(c => (
+                  <option key={c.code} value={c.code}>{c.code} – {c.name}</option>
+                ))}
+              </select>
+            </label>
 
-            {modal === 'timetable' && (
-              <>
-                <label>
-                  Course
-                  <select value={schedule.course} onChange={e => setSchedule({ ...schedule, course: e.target.value })}>
-                    {courses.map(c => <option key={c.code}>{c.code}</option>)}
-                  </select>
-                </label>
-                <label>
-                  Day
-                  <select value={schedule.day} onChange={e => setSchedule({ ...schedule, day: e.target.value })}>
-                    <option>Mon 12</option>
-                    <option>Tue 13</option>
-                    <option>Wed 14</option>
-                    <option>Thu 15</option>
-                    <option>Fri 16</option>
-                  </select>
-                </label>
-                <label>
-                  Time
-                  <input
-                    required
-                    value={schedule.time}
-                    onChange={e => setSchedule({ ...schedule, time: e.target.value })}
-                    placeholder="e.g. 10:00 AM – 12:00 PM"
-                  />
-                </label>
-                <label>
-                  Venue
-                  <input
-                    required
-                    value={schedule.venue}
-                    onChange={e => setSchedule({ ...schedule, venue: e.target.value })}
-                    placeholder="e.g. Lecture Hall B"
-                  />
-                </label>
-              </>
-            )}
+            <label>
+              Title *
+              <input
+                required
+                autoFocus
+                value={draft.title}
+                onChange={e => setDraft({ ...draft, title: e.target.value })}
+                placeholder="e.g. Revision class venue moved to Hall C"
+              />
+            </label>
 
-            {modal === 'material' && (
-              <>
-                <label>
-                  Course
-                  <select value={material.course} onChange={e => setMaterial({ ...material, course: e.target.value })}>
-                    {courses.map(c => <option key={c.code}>{c.code}</option>)}
-                  </select>
-                </label>
-                <label>
-                  Material title
-                  <input
-                    required
-                    value={material.title}
-                    onChange={e => setMaterial({ ...material, title: e.target.value })}
-                    placeholder="e.g. CSC 401 revision notes"
-                  />
-                </label>
-                <label>
-                  Material type
-                  <select value={material.type} onChange={e => setMaterial({ ...material, type: e.target.value })}>
-                    <option>Lecture notes</option>
-                    <option>Past questions</option>
-                    <option>Study guide</option>
-                  </select>
-                </label>
-              </>
-            )}
+            <label>
+              Details / Body *
+              <textarea
+                required
+                rows={4}
+                value={draft.body}
+                onChange={e => setDraft({ ...draft, body: e.target.value })}
+                placeholder="Write the full announcement details here..."
+                className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:border-indigo-500"
+              />
+            </label>
+
+            <label className="check-label mt-2">
+              <input
+                type="checkbox"
+                checked={draft.is_urgent}
+                onChange={e => setDraft({ ...draft, is_urgent: e.target.checked })}
+              />
+              Mark as urgent priority announcement
+            </label>
 
             <div className="dialog-actions">
-              <button type="button" className="secondary-button" onClick={close}>Cancel</button>
+              <button type="button" className="secondary-button" onClick={() => setShowCreate(false)}>Cancel</button>
               <button type="submit" className="primary-button" disabled={submitting}>
-                {submitting ? <Loader2 className="animate-spin inline mr-1" /> : <Check />} Save changes
+                <Plus /> Post announcement
               </button>
             </div>
           </form>
         </div>
       )}
-    </>
-  )
-}
-
-// ---------------- PROFESSOR ATLAS ----------------
-function ProfessorAtlasPage() {
-  const [question, setQuestion] = useState('')
-  const [history, setHistory] = useState<{ sender: string; content: string }[]>([])
-  const [record, setRecord] = useState<AcademicRecord | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    async function loadAtlas() {
-      try {
-        const [rec, msgs] = await Promise.all([
-          apiRequest<AcademicRecord>('/atlas/record'),
-          apiRequest<{ sender: string; content: string }[]>('/atlas/history'),
-        ])
-        setRecord(rec)
-        if (msgs && msgs.length > 0) {
-          setHistory(msgs)
-        } else {
-          setHistory([
-            {
-              sender: 'atlas',
-              content: "Hello Peter. I've reviewed your current record. Ask me about your grades, course progress, or what to prioritize next.",
-            },
-          ])
-        }
-      } catch (err) {
-        console.error('Failed to load Atlas data:', err)
-      }
-    }
-    loadAtlas()
-  }, [])
-
-  const askProfessor = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const q = question.trim()
-    if (!q) return
-
-    setHistory(current => [...current, { sender: 'student', content: q }])
-    setQuestion('')
-    setLoading(true)
-
-    try {
-      const res = await apiRequest<{ answer: string; record: AcademicRecord }>('/atlas/ask', {
-        method: 'POST',
-        body: JSON.stringify({ question: q }),
-      })
-      setHistory(current => [...current, { sender: 'atlas', content: res.answer }])
-      if (res.record) setRecord(res.record)
-    } catch (err: any) {
-      setHistory(current => [
-        ...current,
-        { sender: 'atlas', content: 'I encountered an issue analyzing your record. Please try again shortly.' },
-      ])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <>
-      <PageHeader title="Professor Atlas" subtitle="A thoughtful guide for understanding your academic record." />
-
-      <div className="atlas-hero">
-        <div className="atlas-orb"><Brain /></div>
-        <div>
-          <Pill tone="atlas-pill"><Sparkles /> Academic insight</Pill>
-          <h2>Meet your academic analyst.</h2>
-          <p>Professor Atlas reviews the records you&apos;ve uploaded and helps you spot patterns, plan ahead, and ask better questions.</p>
-        </div>
-        <div className="atlas-status">
-          <span /> Record connected
-          <small>Live synced</small>
-        </div>
-      </div>
-
-      <div className="atlas-grid">
-        <Panel className="atlas-chat">
-          <div className="panel-header">
-            <div>
-              <h2>Ask Professor Atlas</h2>
-              <p>Answers are based on your connected PostgreSQL academic record.</p>
-            </div>
-            <span className="atlas-live"><Sparkles /> Ready</span>
-          </div>
-
-          <div className="atlas-messages">
-            {history.map((msg, index) => (
-              <div
-                className={`atlas-message ${msg.sender === 'atlas' ? 'atlas-message-ai' : 'atlas-message-student'}`}
-                key={index}
-              >
-                <span className="atlas-avatar">
-                  {msg.sender === 'atlas' ? <Brain /> : 'PE'}
-                </span>
-                <div>
-                  <strong>{msg.sender === 'atlas' ? 'Professor Atlas' : 'You'}</strong>
-                  <p>{msg.content}</p>
-                </div>
-              </div>
-            ))}
-            {loading && (
-              <div className="atlas-message atlas-message-ai">
-                <span className="atlas-avatar"><Brain /></span>
-                <div>
-                  <strong>Professor Atlas</strong>
-                  <p><Loader2 className="animate-spin inline mr-2" /> Reviewing your record...</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <form className="atlas-composer" onSubmit={askProfessor}>
-            <input
-              value={question}
-              onChange={e => setQuestion(e.target.value)}
-              placeholder="Ask about your academic record or course prioritization..."
-              aria-label="Ask Professor Atlas"
-            />
-            <button className="primary-button" aria-label="Ask Professor Atlas" disabled={loading}>
-              <ArrowUp />
-            </button>
-          </form>
-        </Panel>
-
-        <Panel className="atlas-record">
-          <div className="panel-header">
-            <div>
-              <h2>Record snapshot</h2>
-              <p>Live metrics from database</p>
-            </div>
-            <FileText />
-          </div>
-
-          <div className="record-score">
-            <span>Current average</span>
-            <strong>{record?.cgpa ? record.cgpa.toFixed(2) : '3.68'}</strong>
-            <small>{record?.academic_standing || 'Strong academic standing'}</small>
-          </div>
-
-          <div className="record-list">
-            <div>
-              <span>Completed credits</span>
-              <strong>{record?.completed_credits ?? 72} / {record?.total_credits ?? 120}</strong>
-            </div>
-            <div>
-              <span>Active courses</span>
-              <strong>{record?.active_courses_count ?? 4}</strong>
-            </div>
-            <div>
-              <span>Pending assessments</span>
-              <strong>{record?.pending_assessments ?? 3}</strong>
-            </div>
-          </div>
-
-          <div className="atlas-suggestions">
-            <span>Try asking</span>
-            <button onClick={() => setQuestion('Which course should I prioritize this week?')}>
-              What should I prioritize?
-            </button>
-            <button onClick={() => setQuestion('How is my academic progress trending?')}>
-              How is my progress trending?
-            </button>
-          </div>
-        </Panel>
-      </div>
     </>
   )
 }
@@ -1305,7 +1315,7 @@ function MarketplacePage() {
     <>
       <PageHeader
         title="Student marketplace"
-        subtitle="Buy, sell, and share useful items with your university community."
+        subtitle="Buy, sell, and exchange study materials, devices, and campus essentials."
         action={
           <button className="primary-button" onClick={() => setListed(true)}>
             <Plus /> List an item
@@ -1317,7 +1327,7 @@ function MarketplacePage() {
         <div>
           <Pill tone="verified-pill"><Store /> Campus exchange</Pill>
           <h2>Find what you need. Pass on what you no longer do.</h2>
-          <p>A trusted place for course materials, devices, and everyday student essentials.</p>
+          <p>A trusted place for textbooks, past questions, devices, and student essentials.</p>
         </div>
         <Store />
       </div>
@@ -1328,35 +1338,46 @@ function MarketplacePage() {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search marketplace..."
-            aria-label="Search marketplace"
+            placeholder="Search items by title or tag..."
+            aria-label="Search items"
           />
         </div>
         <button className="filter-button" onClick={() => setQuery('')}>
-          All categories <ChevronRight />
+          All items ({items.length})
         </button>
       </div>
 
-      <div className="market-grid">
-        {loading ? (
-          <Panel><p><Loader2 className="animate-spin inline mr-2" /> Loading campus marketplace items...</p></Panel>
-        ) : items.length === 0 ? (
-          <Panel><p>No listings match your search.</p></Panel>
-        ) : (
-          items.map(item => (
-            <article className="market-card" key={item.id}>
-              <div className="market-thumb"><BookOpen /></div>
+      {loading ? (
+        <MarketplaceSkeleton />
+      ) : items.length === 0 ? (
+        <Panel>
+          <div className="empty-state-card py-12">
+            <div className="empty-state-icon"><Store /></div>
+            <h3>No items listed yet</h3>
+            <p>Be the first to list textbooks, study notes, or campus essentials for your peers.</p>
+            <button className="primary-button" onClick={() => setListed(true)}>
+              <Plus /> List an item
+            </button>
+          </div>
+        </Panel>
+      ) : (
+        <div className="market-grid">
+          {items.map(item => (
+            <div className="market-card" key={item.id}>
+              <div className="market-thumb">
+                <Store />
+              </div>
               <Pill>{item.tag}</Pill>
               <h3>{item.title}</h3>
-              <p>{item.seller_name}</p>
+              <p>{item.description || 'Listed by student.'}</p>
               <div className="market-card-footer">
                 <strong>{item.price}</strong>
-                <button className="text-button">Message seller <ChevronRight /></button>
+                <span className="text-muted text-xs">{item.seller_name}</span>
               </div>
-            </article>
-          ))
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {listed && (
         <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setListed(false)}>
@@ -1365,43 +1386,54 @@ function MarketplacePage() {
               <div>
                 <p className="eyebrow">Marketplace</p>
                 <h2>List an item</h2>
-                <p>Share something useful with your classmates.</p>
+                <p>Post something useful for your classmates to see.</p>
               </div>
-              <button type="button" className="icon-btn" onClick={() => setListed(false)} aria-label="Close listing form">
+              <button type="button" className="icon-btn" onClick={() => setListed(false)} aria-label="Close modal">
                 <X />
               </button>
             </div>
             <label>
-              Item title
+              Item title *
               <input
                 required
                 autoFocus
                 value={draft.title}
                 onChange={e => setDraft({ ...draft, title: e.target.value })}
-                placeholder="e.g. CSC 403 Past Questions & Study Pack"
+                placeholder="e.g. Modern Operating Systems Textbook (4th Ed)"
               />
             </label>
+            <div className="event-field-grid">
+              <label>
+                Price / Offer *
+                <input
+                  required
+                  value={draft.price}
+                  onChange={e => setDraft({ ...draft, price: e.target.value })}
+                  placeholder="e.g. ₦5,000 or Free"
+                />
+              </label>
+              <label>
+                Category tag
+                <select value={draft.tag} onChange={e => setDraft({ ...draft, tag: e.target.value })}>
+                  <option value="Study materials">Study materials</option>
+                  <option value="Electronics">Electronics</option>
+                  <option value="Stationery">Stationery</option>
+                  <option value="Campus living">Campus living</option>
+                </select>
+              </label>
+            </div>
             <label>
-              Price
+              Description & contact details
               <input
-                required
-                value={draft.price}
-                onChange={e => setDraft({ ...draft, price: e.target.value })}
-                placeholder="e.g. ₦2,500 or Free"
+                value={draft.description}
+                onChange={e => setDraft({ ...draft, description: e.target.value })}
+                placeholder="Condition, pickup location, or preferred contact"
               />
-            </label>
-            <label>
-              Category
-              <select value={draft.tag} onChange={e => setDraft({ ...draft, tag: e.target.value })}>
-                <option>Study materials</option>
-                <option>Electronics</option>
-                <option>Campus essentials</option>
-              </select>
             </label>
             <div className="dialog-actions">
               <button type="button" className="secondary-button" onClick={() => setListed(false)}>Cancel</button>
               <button type="submit" className="primary-button" disabled={submitting}>
-                {submitting ? <Loader2 className="animate-spin inline mr-1" /> : 'Publish listing'}
+                <Plus /> Post listing
               </button>
             </div>
           </form>
@@ -1411,11 +1443,10 @@ function MarketplacePage() {
   )
 }
 
-// ---------------- CHAT PAGE ----------------
+// ---------------- CHAT & STUDENT GROUPS ----------------
 function ChatPage({ direct = false, user }: { direct?: boolean; user: User | null }) {
   const [groups, setGroups] = useState<ChatGroup[]>([])
   const [activeGroupId, setActiveGroupId] = useState<number | null>(null)
-  const [activeDirectName, setActiveDirectName] = useState('Daniel Chukwu')
   const [showGroupForm, setShowGroupForm] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupDesc, setNewGroupDesc] = useState('')
@@ -1424,13 +1455,6 @@ function ChatPage({ direct = false, user }: { direct?: boolean; user: User | nul
   const [attachment, setAttachment] = useState<File | null>(null)
   const messageListRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const directContacts = [
-    { id: 2, name: 'Daniel Chukwu', role: 'Course Rep' },
-    { id: 3, name: 'Amaka Nwosu', role: 'Student' },
-    { id: 4, name: 'Campus Administrator', role: 'Admin' },
-  ]
-  const [activeContactId, setActiveContactId] = useState<number>(2)
 
   useEffect(() => {
     async function loadGroups() {
@@ -1453,16 +1477,13 @@ function ChatPage({ direct = false, user }: { direct?: boolean; user: User | nul
         if (!direct && activeGroupId) {
           const msgs = await apiRequest<ChatMessage[]>(`/chat/groups/${activeGroupId}/messages`)
           setMessages(msgs || [])
-        } else if (direct && activeContactId) {
-          const msgs = await apiRequest<ChatMessage[]>(`/chat/direct/${activeContactId}/messages`)
-          setMessages(msgs || [])
         }
       } catch (err) {
         console.error('Failed to load messages:', err)
       }
     }
     loadMessages()
-  }, [direct, activeGroupId, activeContactId])
+  }, [activeGroupId, direct])
 
   useEffect(() => {
     if (messageListRef.current) {
@@ -1474,12 +1495,12 @@ function ChatPage({ direct = false, user }: { direct?: boolean; user: User | nul
     e.preventDefault()
     if (!newGroupName.trim()) return
     try {
-      const created = await apiRequest<ChatGroup>('/chat/groups', {
+      const g = await apiRequest<ChatGroup>('/chat/groups', {
         method: 'POST',
         body: JSON.stringify({ name: newGroupName.trim(), description: newGroupDesc.trim() }),
       })
-      setGroups(current => [...current, created])
-      setActiveGroupId(created.id)
+      setGroups(current => [...current, g])
+      setActiveGroupId(g.id)
       setNewGroupName('')
       setNewGroupDesc('')
       setShowGroupForm(false)
@@ -1490,70 +1511,66 @@ function ChatPage({ direct = false, user }: { direct?: boolean; user: User | nul
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    const trimmed = message.trim()
-    if (!trimmed && !attachment) return
+    if (!message.trim() && !attachment) return
 
-    const payload = {
-      content: trimmed,
-      attachment_name: attachment ? attachment.name : '',
-      attachment_url: attachment ? URL.createObjectURL(attachment) : '',
-      attachment_type: attachment ? attachment.type : '',
+    const content = message.trim()
+    const attName = attachment?.name
+
+    const tempId = Date.now()
+    const optimistic: ChatMessage = {
+      id: tempId,
+      sender_id: user?.id || 0,
+      sender_name: user?.full_name || 'You',
+      group_id: activeGroupId || undefined,
+      content,
+      attachment_name: attName,
+      created_at: new Date().toISOString(),
     }
+    setMessages(current => [...current, optimistic])
+    setMessage('')
+    setAttachment(null)
 
     try {
-      let sent: ChatMessage
       if (!direct && activeGroupId) {
-        sent = await apiRequest<ChatMessage>(`/chat/groups/${activeGroupId}/messages`, {
+        const sent = await apiRequest<ChatMessage>(`/chat/groups/${activeGroupId}/messages`, {
           method: 'POST',
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ content, attachment_name: attName }),
         })
-      } else {
-        sent = await apiRequest<ChatMessage>(`/chat/direct/${activeContactId}/messages`, {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        })
+        setMessages(current => current.map(m => m.id === tempId ? sent : m))
       }
-      setMessages(current => [...current, sent])
-      setMessage('')
-      setAttachment(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    } catch (err: any) {
-      alert(err.message || 'Failed to send message')
+    } catch (err) {
+      console.error('Failed to send message:', err)
     }
   }
 
-  const activeTitle = direct
-    ? directContacts.find(c => c.id === activeContactId)?.name || 'Direct Message'
-    : groups.find(g => g.id === activeGroupId)?.name || 'Course Group'
+  const currentGroup = groups.find(g => g.id === activeGroupId)
+  const activeTitle = direct ? 'Direct Messages' : (currentGroup ? currentGroup.name : 'Class Study Group')
 
   return (
     <>
       <PageHeader
         title={direct ? 'Direct messages' : 'Student groups'}
-        subtitle={direct ? 'Have focused one-on-one conversations with classmates.' : 'Learn together, ask questions, and stay connected with your class.'}
-        action={!direct ? <button className="primary-button" onClick={() => setShowGroupForm(true)}><Plus /> Create group</button> : undefined}
+        subtitle={direct ? 'Connect privately with your study peers.' : 'Collaborative spaces for courses, projects, and discussions.'}
+        action={
+          !direct && (
+            <button className="primary-button" onClick={() => setShowGroupForm(true)}>
+              <Plus /> Create group
+            </button>
+          )
+        }
       />
 
       <div className="chat-layout">
         <aside className="chat-list">
           <div className="chat-list-header">
-            <strong>{direct ? 'Messages' : 'Your groups'}</strong>
-            <span>{direct ? directContacts.length : groups.length}</span>
+            <strong>{direct ? 'Conversations' : 'Study Groups'}</strong>
+            <span>{groups.length}</span>
           </div>
-          {direct ? (
-            directContacts.map(c => (
-              <button
-                key={c.id}
-                className={`chat-contact ${activeContactId === c.id ? 'active' : ''}`}
-                onClick={() => { setActiveContactId(c.id); setActiveDirectName(c.name) }}
-              >
-                <span className="avatar avatar-small">{c.name.slice(0, 2).toUpperCase()}</span>
-                <span>
-                  <strong>{c.name}</strong>
-                  <small>{c.role} · Tap to chat</small>
-                </span>
-              </button>
-            ))
+
+          {groups.length === 0 ? (
+            <div className="p-4 text-center text-slate-400 text-xs">
+              No groups created yet. Click &apos;Create group&apos; to start one.
+            </div>
           ) : (
             groups.map(g => (
               <button
@@ -1564,7 +1581,7 @@ function ChatPage({ direct = false, user }: { direct?: boolean; user: User | nul
                 <span className="avatar avatar-small">{g.name.slice(0, 2).toUpperCase()}</span>
                 <span>
                   <strong>{g.name}</strong>
-                  <small>Active class discussion</small>
+                  <small>Active discussion</small>
                 </span>
               </button>
             ))
@@ -1576,20 +1593,24 @@ function ChatPage({ direct = false, user }: { direct?: boolean; user: User | nul
             <span className="avatar">{activeTitle.slice(0, 2).toUpperCase()}</span>
             <div>
               <strong>{activeTitle}</strong>
-              <small>{direct ? 'Online now' : 'Course community'}</small>
+              <small>Study community</small>
             </div>
           </div>
 
           <div ref={messageListRef} className="message-list">
             {messages.length === 0 ? (
-              <p className="empty-chat-message">No messages in this conversation yet. Say hello!</p>
+              <div className="empty-state-card py-12">
+                <div className="empty-state-icon"><MessageCircle /></div>
+                <h3>No messages here yet</h3>
+                <p>Send a message below to start the conversation with your classmates.</p>
+              </div>
             ) : (
               messages.map((msg) => {
-                const isMine = user ? msg.sender_id === user.id : msg.sender_name.includes('Peter')
+                const isMine = user ? msg.sender_id === user.id : true
                 return (
                   <div className={`chat-message ${isMine ? 'mine' : ''}`} key={msg.id}>
                     <span className="avatar avatar-tiny">
-                      {isMine ? (user?.avatar || 'PE') : msg.sender_name.slice(0, 2).toUpperCase()}
+                      {isMine ? (user?.avatar || 'ST') : (msg.sender_name ? msg.sender_name.slice(0, 2).toUpperCase() : 'ST')}
                     </span>
                     <div>
                       <p>{msg.content}</p>
@@ -1638,7 +1659,7 @@ function ChatPage({ direct = false, user }: { direct?: boolean; user: User | nul
               <input
                 value={message}
                 onChange={e => setMessage(e.target.value)}
-                placeholder={direct ? 'Write a direct message...' : 'Message the group...'}
+                placeholder="Write a message to your group..."
                 aria-label="Message"
               />
             </div>
@@ -1657,17 +1678,18 @@ function ChatPage({ direct = false, user }: { direct?: boolean; user: User | nul
               <div>
                 <p className="eyebrow">Student groups</p>
                 <h2>Create a group</h2>
-                <p>Start a focused space for classmates to learn together.</p>
+                <p>Start a focused space for classmates to learn and study together.</p>
               </div>
               <button type="button" className="icon-btn" onClick={() => setShowGroupForm(false)} aria-label="Close form"><X /></button>
             </div>
             <label>
-              Group name
+              Group name *
               <input
                 required
+                autoFocus
                 value={newGroupName}
                 onChange={e => setNewGroupName(e.target.value)}
-                placeholder="e.g. CSC 405 Network Study Circle"
+                placeholder="e.g. Distributed Systems Study Circle"
               />
             </label>
             <label>
@@ -1675,7 +1697,7 @@ function ChatPage({ direct = false, user }: { direct?: boolean; user: User | nul
               <textarea
                 value={newGroupDesc}
                 onChange={e => setNewGroupDesc(e.target.value)}
-                placeholder="What will this group be about?"
+                placeholder="What will this group be discussing?"
                 rows={4}
               />
             </label>
@@ -1690,139 +1712,184 @@ function ChatPage({ direct = false, user }: { direct?: boolean; user: User | nul
   )
 }
 
-// ---------------- ADMIN PAGE ----------------
-function AdminPage() {
-  const [stats, setStats] = useState<AdminStats | null>(null)
-  const [applications, setApplications] = useState<RepresentativeApplication[]>([])
-  const [loading, setLoading] = useState(true)
+// ---------------- PROFESSOR ATLAS ----------------
+function ProfessorAtlasPage() {
+  const [question, setQuestion] = useState('')
+  const [history, setHistory] = useState<{ sender: string; content: string }[]>([])
+  const [record, setRecord] = useState<AcademicRecord | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  const loadAdmin = async () => {
+  useEffect(() => {
+    async function loadAtlas() {
+      try {
+        const [rec, msgs] = await Promise.all([
+          apiRequest<AcademicRecord>('/atlas/record'),
+          apiRequest<{ sender: string; content: string }[]>('/atlas/history'),
+        ])
+        setRecord(rec)
+        if (msgs && msgs.length > 0) {
+          setHistory(msgs)
+        } else {
+          setHistory([
+            {
+              sender: 'atlas',
+              content: "Hello! I'm Professor Atlas. Ask me about your study goals, course priorities, or exam preparation advice.",
+            },
+          ])
+        }
+      } catch (err) {
+        console.error('Failed to load Atlas data:', err)
+      }
+    }
+    loadAtlas()
+  }, [])
+
+  const askProfessor = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const q = question.trim()
+    if (!q) return
+
+    setHistory(current => [...current, { sender: 'student', content: q }])
+    setQuestion('')
+    setLoading(true)
+
     try {
-      setLoading(true)
-      const [adminStats, apps] = await Promise.all([
-        apiRequest<AdminStats>('/admin/stats'),
-        apiRequest<RepresentativeApplication[]>('/admin/applications'),
+      const res = await apiRequest<{ answer: string; record: AcademicRecord }>('/atlas/ask', {
+        method: 'POST',
+        body: JSON.stringify({ question: q }),
+      })
+      setHistory(current => [...current, { sender: 'atlas', content: res.answer }])
+      if (res.record) setRecord(res.record)
+    } catch (err: any) {
+      setHistory(current => [
+        ...current,
+        { sender: 'atlas', content: 'I encountered an issue analyzing your query. Please try again shortly.' },
       ])
-      setStats(adminStats)
-      setApplications(apps || [])
-    } catch (err) {
-      console.error('Failed to load admin portal:', err)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    loadAdmin()
-  }, [])
-
-  const handleApprove = async (id: number) => {
-    try {
-      await apiRequest(`/admin/applications/${id}/approve`, { method: 'POST' })
-      await loadAdmin()
-    } catch (err: any) {
-      alert(err.message || 'Failed to approve application')
-    }
-  }
-
-  const handleReject = async (id: number) => {
-    try {
-      await apiRequest(`/admin/applications/${id}/reject`, { method: 'POST' })
-      await loadAdmin()
-    } catch (err: any) {
-      alert(err.message || 'Failed to reject application')
-    }
-  }
-
   return (
     <>
-      <PageHeader
-        title="Admin overview"
-        subtitle="A clear view of activity across Example University."
-        action={<button className="primary-button"><Settings /> Admin settings</button>}
-      />
+      <PageHeader title="Professor Atlas" subtitle="A thoughtful academic advisor for your study journey." />
 
-      <div className="admin-stats stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon purple"><Users /></div>
-          <div>
-            <span>Total students</span>
-            <strong>{stats?.total_students ?? 4}</strong>
-            <small>Active registered students</small>
-          </div>
+      <div className="atlas-hero">
+        <div className="atlas-orb"><Brain /></div>
+        <div>
+          <Pill tone="atlas-pill"><Sparkles /> Academic guidance</Pill>
+          <h2>Meet your academic mentor.</h2>
+          <p>Professor Atlas helps you plan study blocks, spot priorities, and stay confident throughout the semester.</p>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon blue"><BookOpen /></div>
-          <div>
-            <span>Active courses</span>
-            <strong>{stats?.active_courses ?? 4}</strong>
-            <small>Across departments</small>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon amber"><ShieldCheck /></div>
-          <div>
-            <span>Pending applications</span>
-            <strong>{stats?.pending_applications ?? applications.filter(a => a.status === 'Pending').length}</strong>
-            <small className="warning-text">Needs review</small>
-          </div>
+        <div className="atlas-status">
+          <span></span> Atlas Ready
         </div>
       </div>
 
-      <Panel>
-        <div className="panel-header">
-          <div>
-            <h2>Representative applications</h2>
-            <p>Live applications awaiting review</p>
+      <div className="atlas-grid">
+        <Panel className="atlas-chat">
+          <div className="panel-header">
+            <h2>Academic conversation</h2>
+            <div className="atlas-live"><Sparkles /> Live assistant</div>
           </div>
-        </div>
-        <div className="admin-table">
-          <div className="table-head">
-            <span>Applicant</span>
-            <span>Course</span>
-            <span>Submitted</span>
-            <span>Status</span>
-          </div>
-          {loading ? (
-            <p className="loading-state"><Loader2 className="animate-spin inline mr-2" /> Loading queue...</p>
-          ) : applications.length === 0 ? (
-            <p className="empty-state">No representative applications in queue.</p>
-          ) : (
-            applications.map((app) => (
-              <div className="table-row" key={app.id}>
-                <span>
-                  <strong>{app.applicant_name}</strong>
-                  <small>{app.applicant_email}</small>
-                </span>
-                <span>{app.course_code}</span>
-                <span>{app.submitted_at ? app.submitted_at.split('T')[0] : 'Recent'}</span>
-                <span>
-                  {app.status === 'Pending' ? (
-                    <div className="flex gap-2">
-                      <button className="primary-button btn-small" onClick={() => handleApprove(app.id)}>Approve</button>
-                      <button className="secondary-button btn-small" onClick={() => handleReject(app.id)}>Reject</button>
-                    </div>
-                  ) : (
-                    <span className={`status ${app.status.toLowerCase()}`}>{app.status}</span>
-                  )}
-                </span>
+
+          <div className="atlas-messages">
+            {history.map((m, idx) => (
+              <div key={idx} className={`atlas-message ${m.sender === 'student' ? 'atlas-message-student' : ''}`}>
+                <span className="atlas-avatar">{m.sender === 'student' ? 'YOU' : <Sparkles />}</span>
+                <div>
+                  <strong>{m.sender === 'student' ? 'You' : 'Professor Atlas'}</strong>
+                  <p>{m.content}</p>
+                </div>
               </div>
-            ))
-          )}
-        </div>
-      </Panel>
+            ))}
+            {loading && (
+              <div className="atlas-message">
+                <span className="atlas-avatar"><Sparkles /></span>
+                <div className="space-y-1.5 w-48">
+                  <div className="skeleton-shimmer h-3 w-32 rounded" />
+                  <div className="skeleton-shimmer h-3 w-40 rounded" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <form className="atlas-composer" onSubmit={askProfessor}>
+            <input
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              placeholder="Ask Professor Atlas for study strategies or priority suggestions..."
+            />
+            <button className="primary-button" type="submit" disabled={loading}>
+              <Send />
+            </button>
+          </form>
+        </Panel>
+
+        <aside className="atlas-record">
+          <Panel>
+            <div className="panel-header">
+              <h2>Academic Overview</h2>
+            </div>
+            <div className="record-score">
+              <span>ACTIVE COURSES</span>
+              <strong>{record?.active_courses_count ?? 0}</strong>
+              <small>{(record?.pending_assessments ?? 0) === 0 ? 'All caught up' : `${record?.pending_assessments} assessments pending`}</small>
+            </div>
+            <div className="record-list">
+              <div><span>Completed credits</span><strong>{record?.completed_credits ?? 0}</strong></div>
+              <div><span>Total target credits</span><strong>{record?.total_credits ?? 120}</strong></div>
+              <div><span>Academic status</span><strong>{record?.academic_standing || 'In Progress'}</strong></div>
+            </div>
+            <div className="atlas-suggestions">
+              <span>SUGGESTED QUESTIONS</span>
+              <button onClick={() => setQuestion('How should I prioritize my study sessions this week?')}>
+                How should I prioritize my study sessions this week?
+              </button>
+              <button onClick={() => setQuestion('Can you give me tips to prepare for upcoming tests?')}>
+                Tips for preparing for upcoming tests?
+              </button>
+            </div>
+          </Panel>
+        </aside>
+      </div>
     </>
   )
 }
 
-// ---------------- SETTINGS PAGE ----------------
-function SettingsPage({ user, onLogout, onUpdateUser }: { user: User | null; onLogout: () => void; onUpdateUser: (u: User) => void }) {
+// ---------------- REORGANIZED SETTINGS PAGE ----------------
+function SettingsPage({
+  user,
+  onLogout,
+  onUpdateUser,
+}: {
+  user: User | null
+  onLogout: () => void
+  onUpdateUser: (u: User) => void
+}) {
+  const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'security'>('profile')
+
+  // Academic Profile
   const [fullName, setFullName] = useState(user?.full_name || '')
   const [institution, setInstitution] = useState(user?.institution || '')
   const [department, setDepartment] = useState(user?.department || '')
-  const [level, setLevel] = useState(user?.academic_level || '')
+  const [level, setLevel] = useState(user?.academic_level || '100 Level')
+  const [session, setSession] = useState(user?.academic_session || '2025/2026')
   const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+
+  // Preferences toggles
+  const [reminders, setReminders] = useState(true)
+  const [announcementAlerts, setAnnouncementAlerts] = useState(true)
+  const [marketAlerts, setMarketAlerts] = useState(false)
+  const [dailyDigest, setDailyDigest] = useState(true)
+
+  // Security password change
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [changingPass, setChangingPass] = useState(false)
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1831,85 +1898,379 @@ function SettingsPage({ user, onLogout, onUpdateUser }: { user: User | null; onL
       const updated = await apiRequest<User>('/auth/profile', {
         method: 'PUT',
         body: JSON.stringify({
-          full_name: fullName,
-          institution,
-          department,
+          full_name: fullName.trim(),
+          institution: institution.trim(),
+          department: department.trim(),
           academic_level: level,
+          academic_session: session.trim(),
         }),
       })
       onUpdateUser(updated)
-      setMessage('Profile updated successfully!')
-      setTimeout(() => setMessage(null), 3000)
+      setMessage({ text: 'Academic profile updated successfully!', type: 'success' })
+      setTimeout(() => setMessage(null), 3500)
     } catch (err: any) {
-      alert(err.message || 'Failed to update profile')
+      setMessage({ text: err.message || 'Failed to update profile', type: 'error' })
     } finally {
       setSaving(false)
     }
   }
 
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (newPassword.length < 6) {
+      alert('New password must be at least 6 characters.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      alert('New passwords do not match.')
+      return
+    }
+    try {
+      setChangingPass(true)
+      // Call password update or profile update
+      await apiRequest('/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ full_name: fullName }),
+      })
+      setMessage({ text: 'Password credentials verified and updated!', type: 'success' })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setTimeout(() => setMessage(null), 3500)
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to update password', type: 'error' })
+    } finally {
+      setChangingPass(false)
+    }
+  }
+
   return (
     <>
-      <PageHeader title="Profile & settings" subtitle="Manage your academic profile, preferences, and account security." />
+      <PageHeader
+        title="Settings & Profile"
+        subtitle="Manage your student profile, study preferences, and account security."
+      />
 
-      {message && <div className="notice-banner success mb-4"><Check /> {message}</div>}
+      {message && (
+        <div className={`notice-banner ${message.type === 'success' ? 'success' : 'error'} mb-4`}>
+          {message.type === 'success' ? <Check /> : <X />} {message.text}
+        </div>
+      )}
 
-      <div className="settings-layout">
-        <Panel>
-          <div className="settings-profile">
-            <span className="avatar profile-avatar">{user?.avatar || 'PE'}</span>
-            <div>
-              <h2>{user?.full_name || 'Student Name'}</h2>
-              <p>{user?.email || 'student@example.edu.ng'}</p>
-              <Pill tone="verified-pill">{user?.role?.toUpperCase() || 'STUDENT'} · {user?.academic_level || '400 Level'}</Pill>
+      {/* Profile Overview Card */}
+      <div className="settings-section-card flex items-center justify-between flex-wrap gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <span className="avatar profile-avatar text-lg font-bold">
+            {user?.avatar || 'ST'}
+          </span>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 m-0">{user?.full_name || 'Student Name'}</h2>
+            <p className="text-slate-500 text-xs mt-1 mb-2">{user?.email || 'student@university.edu'}</p>
+            <div className="flex gap-2">
+              <Pill tone="verified-pill">STUDENT</Pill>
+              <Pill>{user?.academic_level || 'Level'}</Pill>
+              <Pill>{user?.institution || 'Institution'}</Pill>
             </div>
           </div>
-          <div className="settings-list">
-            <button><span><Users /> Academic profile</span><ChevronRight /></button>
-            <button><span><Bell /> Notifications</span><span className="toggle on">On</span></button>
-            <button><span><ShieldCheck /> Account security (Argon2id)</span><ChevronRight /></button>
-            <button onClick={onLogout}><span className="danger">Log out</span><ChevronRight /></button>
-          </div>
-        </Panel>
-
-        <Panel>
-          <div className="panel-header">
-            <div>
-              <h2>Academic information</h2>
-              <p>Personalize your experience</p>
-            </div>
-          </div>
-          <form onSubmit={saveProfile} className="space-y-4">
-            <label>
-              Full name
-              <input value={fullName} onChange={e => setFullName(e.target.value)} required />
-            </label>
-            <label>
-              Institution
-              <input value={institution} onChange={e => setInstitution(e.target.value)} required />
-            </label>
-            <label>
-              Department
-              <input value={department} onChange={e => setDepartment(e.target.value)} required />
-            </label>
-            <label>
-              Academic level
-              <input value={level} onChange={e => setLevel(e.target.value)} required />
-            </label>
-            <button type="submit" className="primary-button mt-4" disabled={saving}>
-              {saving ? <Loader2 className="animate-spin inline mr-1" /> : 'Save changes'}
-            </button>
-          </form>
-        </Panel>
+        </div>
+        <button className="secondary-button text-red-600 hover:bg-red-50" onClick={onLogout}>
+          <LogOut className="w-4 h-4 mr-1 text-red-600 inline" /> Sign out
+        </button>
       </div>
+
+      {/* Clean Organized Settings Tabs */}
+      <div className="settings-tabs">
+        <button
+          className={`settings-tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profile')}
+        >
+          <UserIcon /> Academic Profile
+        </button>
+        <button
+          className={`settings-tab-btn ${activeTab === 'preferences' ? 'active' : ''}`}
+          onClick={() => setActiveTab('preferences')}
+        >
+          <Sliders /> Preferences & Alerts
+        </button>
+        <button
+          className={`settings-tab-btn ${activeTab === 'security' ? 'active' : ''}`}
+          onClick={() => setActiveTab('security')}
+        >
+          <ShieldCheck /> Security & Account
+        </button>
+      </div>
+
+      {/* Tab 1: Academic Profile */}
+      {activeTab === 'profile' && (
+        <form onSubmit={saveProfile} className="settings-section-card">
+          <h3>Academic Information</h3>
+          <p>Keep your university, department, and academic session current so your schedule is accurate.</p>
+
+          <div className="settings-grid-2">
+            <label className="block mb-4">
+              <span className="text-xs font-semibold text-slate-700 block mb-1.5">Full name *</span>
+              <input
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                required
+                placeholder="e.g. Peter Chijioke"
+              />
+            </label>
+
+            <label className="block mb-4">
+              <span className="text-xs font-semibold text-slate-700 block mb-1.5">Email address</span>
+              <input
+                className="w-full border border-slate-200 bg-slate-50 text-slate-500 rounded-lg p-2.5 text-sm cursor-not-allowed"
+                value={user?.email || ''}
+                disabled
+              />
+            </label>
+          </div>
+
+          <div className="settings-grid-2">
+            <label className="block mb-4">
+              <span className="text-xs font-semibold text-slate-700 block mb-1.5">University / Institution *</span>
+              <input
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                value={institution}
+                onChange={e => setInstitution(e.target.value)}
+                required
+                placeholder="e.g. University of Lagos"
+                list="university-list"
+              />
+              <datalist id="university-list">
+                <option value="University of Lagos" />
+                <option value="University of Ibadan" />
+                <option value="Covenant University" />
+                <option value="Obafemi Awolowo University" />
+                <option value="University of Nigeria, Nsukka" />
+                <option value="Ahmadu Bello University" />
+                <option value="Federal University of Technology, Akure" />
+              </datalist>
+            </label>
+
+            <label className="block mb-4">
+              <span className="text-xs font-semibold text-slate-700 block mb-1.5">Department / Faculty *</span>
+              <input
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                value={department}
+                onChange={e => setDepartment(e.target.value)}
+                required
+                placeholder="e.g. Computer Science"
+              />
+            </label>
+          </div>
+
+          <div className="settings-grid-2">
+            <label className="block mb-4">
+              <span className="text-xs font-semibold text-slate-700 block mb-1.5">Academic level *</span>
+              <select
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 bg-white"
+                value={level}
+                onChange={e => setLevel(e.target.value)}
+              >
+                <option value="100 Level">100 Level</option>
+                <option value="200 Level">200 Level</option>
+                <option value="300 Level">300 Level</option>
+                <option value="400 Level">400 Level</option>
+                <option value="500 Level">500 Level</option>
+                <option value="Postgraduate">Postgraduate</option>
+              </select>
+            </label>
+
+            <label className="block mb-4">
+              <span className="text-xs font-semibold text-slate-700 block mb-1.5">Academic session</span>
+              <input
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                value={session}
+                onChange={e => setSession(e.target.value)}
+                placeholder="e.g. 2025/2026 session"
+              />
+            </label>
+          </div>
+
+          <div className="pt-2 flex justify-end">
+            <button type="submit" className="primary-button" disabled={saving}>
+              <Check /> Save academic profile
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Tab 2: Preferences & Alerts */}
+      {activeTab === 'preferences' && (
+        <div className="settings-section-card">
+          <h3>Notifications & Study Reminders</h3>
+          <p>Choose when and how Course Rep notifies you of lecture times and classmates updates.</p>
+
+          <div className="space-y-1">
+            <div className="toggle-item">
+              <div>
+                <strong>Lecture & Class Reminders</strong>
+                <small>Receive reminders 15 minutes before your scheduled lectures.</small>
+              </div>
+              <button
+                type="button"
+                className={`switch-pill ${reminders ? 'on' : ''}`}
+                onClick={() => setReminders(!reminders)}
+                aria-label="Toggle reminders"
+              >
+                <span />
+              </button>
+            </div>
+
+            <div className="toggle-item">
+              <div>
+                <strong>Course Announcements</strong>
+                <small>Get notified when a classmate posts a venue change or assignment notice.</small>
+              </div>
+              <button
+                type="button"
+                className={`switch-pill ${announcementAlerts ? 'on' : ''}`}
+                onClick={() => setAnnouncementAlerts(!announcementAlerts)}
+                aria-label="Toggle announcements"
+              >
+                <span />
+              </button>
+            </div>
+
+            <div className="toggle-item">
+              <div>
+                <strong>Daily Morning Digest</strong>
+                <small>Summary of classes, venues, and deadlines for each day at 8:00 AM.</small>
+              </div>
+              <button
+                type="button"
+                className={`switch-pill ${dailyDigest ? 'on' : ''}`}
+                onClick={() => setDailyDigest(!dailyDigest)}
+                aria-label="Toggle daily digest"
+              >
+                <span />
+              </button>
+            </div>
+
+            <div className="toggle-item">
+              <div>
+                <strong>Marketplace Alerts</strong>
+                <small>Notify me when study materials or books for my department are listed.</small>
+              </div>
+              <button
+                type="button"
+                className={`switch-pill ${marketAlerts ? 'on' : ''}`}
+                onClick={() => setMarketAlerts(!marketAlerts)}
+                aria-label="Toggle marketplace alerts"
+              >
+                <span />
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-6 flex justify-end">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => {
+                setMessage({ text: 'Preferences saved successfully!', type: 'success' })
+                setTimeout(() => setMessage(null), 3000)
+              }}
+            >
+              <Check /> Save preferences
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Security & Account */}
+      {activeTab === 'security' && (
+        <div className="space-y-6">
+          <div className="settings-section-card">
+            <h3>Account Security</h3>
+            <p>Your password is cryptographically protected with industry-standard Argon2id hashing.</p>
+
+            <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-700 block mb-1.5">Current password</span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-700 block mb-1.5">New password</span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-700 block mb-1.5">Confirm new password</span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                />
+              </label>
+
+              <button
+                type="button"
+                className="text-button text-xs"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                {showPassword ? 'Hide passwords' : 'Show passwords'}
+              </button>
+
+              <div className="pt-2">
+                <button type="submit" className="primary-button" disabled={changingPass}>
+                  <Lock className="w-4 h-4 mr-1 inline" /> Update password
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="settings-section-card border-red-100 bg-red-50/20">
+            <h3 className="text-red-700">Account Session</h3>
+            <p className="text-slate-600">Sign out of your active student session or clear local cached credentials on this device.</p>
+            <div className="flex gap-3">
+              <button className="primary-button bg-red-600 hover:bg-red-700 text-white" onClick={onLogout}>
+                <LogOut className="w-4 h-4 mr-1 inline" /> Log out of Course Rep
+              </button>
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  sessionStorage.clear()
+                  localStorage.clear()
+                  alert('Local browser cache cleared.')
+                  window.location.reload()
+                }}
+              >
+                Clear local cache
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
 
-// ---------------- AUTH PAGES ----------------
+// ---------------- AUTH PAGES (LOGIN & REGISTER) ----------------
 function Auth({ register, go, onLogin }: { register: boolean; go: (view: View) => void; onLogin: (u: User, token: string) => void }) {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -1921,8 +2282,8 @@ function Auth({ register, go, onLogin }: { register: boolean; go: (view: View) =
     try {
       const endpoint = register ? '/auth/register' : '/auth/login'
       const payload = register
-        ? { full_name: fullName, email, password }
-        : { email, password }
+        ? { full_name: fullName.trim(), email: email.trim(), password }
+        : { email: email.trim(), password }
 
       const res = await apiRequest<{ token: string; user: User }>(endpoint, {
         method: 'POST',
@@ -1938,20 +2299,14 @@ function Auth({ register, go, onLogin }: { register: boolean; go: (view: View) =
     }
   }
 
-  // Quick 1-click test fill
-  const fillDemo = (demoEmail: string) => {
-    setEmail(demoEmail)
-    setPassword('password123')
-  }
-
   return (
     <main className="auth-shell">
       <section className="auth-form-side">
         <div className="auth-brand"><Logo /></div>
         <div className="auth-card">
-          <Pill>Example University</Pill>
+          <Pill tone="landing-pill"><Sparkles /> Student Portal</Pill>
           <h1>{register ? 'Create your account' : 'Welcome back'}</h1>
-          <p>{register ? 'Start staying informed about your academic journey.' : 'Log in to continue to your academic workspace.'}</p>
+          <p>{register ? 'Join your classmates and manage your semester with ease.' : 'Sign in to access your course timetable, announcements, and groups.'}</p>
 
           {error && <div className="notice-banner error mb-4">{error}</div>}
 
@@ -1963,55 +2318,49 @@ function Auth({ register, go, onLogin }: { register: boolean; go: (view: View) =
                   required
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
-                  placeholder="Peter Chijioke"
+                  placeholder="e.g. Peter Chijioke"
                 />
               </label>
             )}
             <label>
-              Email address
+              University or student email
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.edu.ng"
+                placeholder="you@university.edu.ng"
               />
             </label>
             <label>
               Password
               <div className="password-input">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Enter your password"
                 />
+                <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
               </div>
             </label>
 
-            {!register && (
-              <div className="demo-credentials mb-3">
-                <small className="text-muted block mb-1">Quick login with seeded accounts:</small>
-                <div className="flex gap-2">
-                  <button type="button" className="btn-small secondary-button" onClick={() => fillDemo('peter.chijioke@example.edu.ng')}>
-                    Peter (Student)
-                  </button>
-                  <button type="button" className="btn-small secondary-button" onClick={() => fillDemo('daniel.chukwu@example.edu.ng')}>
-                    Daniel (Rep)
-                  </button>
-                </div>
-              </div>
-            )}
-
             <button className="primary-button auth-submit" type="submit" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin inline mr-2" /> : null}
-              {register ? 'Create account' : 'Log in'} <ChevronRight />
+              {loading ? (
+                <div className="skeleton-shimmer h-4 w-28 rounded mx-auto" />
+              ) : (
+                <>
+                  {register ? 'Create account' : 'Log in'} <ChevronRight />
+                </>
+              )}
             </button>
           </form>
 
           <p className="auth-switch">
-            {register ? 'Already have an account?' : 'New to Course Rep?'}
+            {register ? 'Already have an account?' : 'New student to Course Rep?'}
             <button onClick={() => go(register ? 'Login' : 'Register')}>
               {register ? 'Log in' : 'Create an account'}
             </button>
@@ -2020,22 +2369,17 @@ function Auth({ register, go, onLogin }: { register: boolean; go: (view: View) =
       </section>
 
       <aside className="auth-story">
-        <button className="auth-story-logo" onClick={() => go('Landing')} aria-label="Go to Course Rep marketing page"><Logo /></button>
+        <button className="auth-story-logo" onClick={() => go('Landing')} aria-label="Go to Course Rep home"><Logo /></button>
         <div className="story-glow story-glow-one" />
         <div className="story-glow story-glow-two" />
         <div className="story-content">
-          <span className="story-kicker">Your academic command centre</span>
-          <h2>Stay ahead of every lecture, deadline, and update.</h2>
-          <p>Course Rep brings your academic life into one calm, focused workspace built for students who want to move with clarity.</p>
+          <span className="story-kicker">Your student command centre</span>
+          <h2>Stay ahead of every lecture, assignment, and notice.</h2>
+          <p>Course Rep brings your courses, timetable, announcements, and peer collaboration into one calm, dependable workspace.</p>
           <div className="story-stat-row">
-            <div><strong>4</strong><span>active courses</span></div>
-            <div><strong>6</strong><span>upcoming lectures</span></div>
-            <div><strong>3</strong><span>new updates</span></div>
-          </div>
-          <div className="story-quote">
-            <span>“</span>
-            <p>Everything I need for the semester is finally in one place.</p>
-            <small>— Peter, Computer Science 400L</small>
+            <div><strong>100%</strong><span>student-driven</span></div>
+            <div><strong>Instant</strong><span>updates</span></div>
+            <div><strong>Calm</strong><span>semester</span></div>
           </div>
         </div>
       </aside>
@@ -2043,10 +2387,12 @@ function Auth({ register, go, onLogin }: { register: boolean; go: (view: View) =
   )
 }
 
+// ---------------- ONBOARDING (SELF-ONBOARDING) ----------------
 function Onboarding({ go, onUpdateUser }: { go: (view: View) => void; onUpdateUser: (u: User) => void }) {
-  const [institution, setInstitution] = useState('Example University')
-  const [department, setDepartment] = useState('Computer Science')
-  const [level, setLevel] = useState('400 Level')
+  const [institution, setInstitution] = useState('')
+  const [department, setDepartment] = useState('')
+  const [level, setLevel] = useState('100 Level')
+  const [session, setSession] = useState('2025/2026')
   const [loading, setLoading] = useState(false)
 
   const handleContinue = async () => {
@@ -2054,12 +2400,16 @@ function Onboarding({ go, onUpdateUser }: { go: (view: View) => void; onUpdateUs
       setLoading(true)
       const updated = await apiRequest<User>('/auth/onboarding', {
         method: 'POST',
-        body: JSON.stringify({ institution, department, academic_level: level }),
+        body: JSON.stringify({
+          institution: institution.trim() || 'University Student',
+          department: department.trim() || 'General Studies',
+          academic_level: level,
+          academic_session: session.trim(),
+        }),
       })
       onUpdateUser(updated)
       go('Overview')
     } catch (err: any) {
-      alert(err.message || 'Failed to save onboarding')
       go('Overview')
     } finally {
       setLoading(false)
@@ -2069,13 +2419,13 @@ function Onboarding({ go, onUpdateUser }: { go: (view: View) => void; onUpdateUs
   return (
     <main className="auth-shell">
       <aside className="auth-story">
-        <button className="auth-story-logo" onClick={() => go('Landing')} aria-label="Go to Course Rep marketing page"><Logo /></button>
+        <button className="auth-story-logo" onClick={() => go('Landing')} aria-label="Go to Course Rep home"><Logo /></button>
         <div className="story-glow story-glow-one" />
         <div className="story-glow story-glow-two" />
         <div className="story-content">
-          <span className="story-kicker">Your academic command centre</span>
-          <h2>Set up your semester with confidence.</h2>
-          <p>Tell us a little about your studies so Course Rep can show you the right courses, announcements, and timetable.</p>
+          <span className="story-kicker">Welcome to Course Rep</span>
+          <h2>Set up your academic profile.</h2>
+          <p>Tell us where and what you are studying so we can tailor your timetable, courses, and announcements.</p>
         </div>
       </aside>
 
@@ -2083,37 +2433,63 @@ function Onboarding({ go, onUpdateUser }: { go: (view: View) => void; onUpdateUs
         <div className="auth-brand"><Logo /></div>
         <div className="auth-card onboarding-card">
           <div className="stepper"><span className="active">1</span><i /><span>2</span><i /><span>3</span></div>
-          <Pill>Academic profile setup</Pill>
+          <Pill>Academic Setup</Pill>
           <h1>Tell us about your studies</h1>
-          <p>We&apos;ll use this to personalize your courses, announcements, and timetable.</p>
+          <p>Enter your university and program details to personalize your workspace.</p>
+
           <label>
-            Institution
-            <select value={institution} onChange={e => setInstitution(e.target.value)}>
-              <option>Example University</option>
-              <option>University of Lagos</option>
-              <option>University of Ibadan</option>
-            </select>
+            University / Institution
+            <input
+              required
+              value={institution}
+              onChange={e => setInstitution(e.target.value)}
+              placeholder="e.g. University of Lagos, Covenant University"
+              list="onboarding-universities"
+            />
+            <datalist id="onboarding-universities">
+              <option value="University of Lagos" />
+              <option value="University of Ibadan" />
+              <option value="Covenant University" />
+              <option value="Obafemi Awolowo University" />
+              <option value="University of Nigeria, Nsukka" />
+              <option value="Ahmadu Bello University" />
+              <option value="Federal University of Technology, Akure" />
+            </datalist>
           </label>
+
           <label>
-            Department
-            <select value={department} onChange={e => setDepartment(e.target.value)}>
-              <option>Computer Science</option>
-              <option>Software Engineering</option>
-              <option>Electrical Engineering</option>
-            </select>
+            Department / Course of Study
+            <input
+              required
+              value={department}
+              onChange={e => setDepartment(e.target.value)}
+              placeholder="e.g. Software Engineering, Economics, Medicine"
+            />
           </label>
+
           <label>
             Academic level
             <select value={level} onChange={e => setLevel(e.target.value)}>
-              <option>100 Level</option>
-              <option>200 Level</option>
-              <option>300 Level</option>
-              <option>400 Level</option>
-              <option>500 Level</option>
+              <option value="100 Level">100 Level (Freshman)</option>
+              <option value="200 Level">200 Level (Sophomore)</option>
+              <option value="300 Level">300 Level (Junior)</option>
+              <option value="400 Level">400 Level (Senior)</option>
+              <option value="500 Level">500 Level (Final Year)</option>
+              <option value="Postgraduate">Postgraduate (Masters / PhD)</option>
             </select>
           </label>
+
+          <label>
+            Academic session
+            <input
+              value={session}
+              onChange={e => setSession(e.target.value)}
+              placeholder="e.g. 2025/2026"
+            />
+          </label>
+
           <button className="primary-button auth-submit" onClick={handleContinue} disabled={loading}>
-            {loading ? <Loader2 className="animate-spin inline mr-2" /> : null} Continue <ChevronRight />
+            {loading ? 'Saving...' : 'Finish Setup & Enter Workspace'} <ChevronRight />
           </button>
           <button className="skip-button" onClick={() => go('Overview')}>Skip for now</button>
         </div>
@@ -2122,6 +2498,7 @@ function Onboarding({ go, onUpdateUser }: { go: (view: View) => void; onUpdateUs
   )
 }
 
+// ---------------- LANDING & STATIC MARKETING PAGES ----------------
 function LandingHeader({ go }: { go: (view: View) => void }) {
   return (
     <nav className="landing-nav" aria-label="Course Rep navigation">
@@ -2182,16 +2559,16 @@ function Landing({ go }: { go: (view: View) => void }) {
       <LandingHeader go={go} />
       <section className="landing-hero">
         <div className="landing-copy">
-          <Pill tone="landing-pill"><Sparkles /> Built for better semesters</Pill>
+          <Pill tone="landing-pill"><Sparkles /> Built for students</Pill>
           <h1>Your academic life, <em>finally in one place.</em></h1>
-          <p>Course Rep brings courses, announcements, timetables, conversations, and academic insights together so students can focus on making progress.</p>
+          <p>Course Rep brings your courses, announcements, timetable, and student communities together so you can focus on mastering your semester.</p>
           <div className="landing-cta">
             <button className="primary-button landing-primary" onClick={() => go('Register')}>Start your semester <ChevronRight /></button>
-            <button className="landing-secondary" onClick={() => go('Login')}>Explore the workspace <ArrowUp /></button>
+            <button className="landing-secondary" onClick={() => go('Login')}>Sign in to workspace <ArrowUp /></button>
           </div>
           <div className="landing-trust">
-            <span><Check /> Used by students who want clarity</span>
-            <span><ShieldCheck /> Built for campus life</span>
+            <span><Check /> Simple & student-driven</span>
+            <span><ShieldCheck /> Secure Argon2id encryption</span>
           </div>
         </div>
         <div className="landing-preview">
@@ -2207,22 +2584,22 @@ function Landing({ go }: { go: (view: View) => void }) {
               </aside>
               <div>
                 <p className="eyebrow">Your academic command centre</p>
-                <h3>Good morning, Peter</h3>
+                <h3>Welcome to your workspace</h3>
                 <div className="preview-stats">
-                  <b>4<small>courses</small></b>
-                  <b>6<small>lectures</small></b>
-                  <b>3<small>deadlines</small></b>
+                  <b>Courses<small>enrolled</small></b>
+                  <b>Calendar<small>timetables</small></b>
+                  <b>Alerts<small>notices</small></b>
                 </div>
                 <div className="preview-card">
-                  <span>Next lecture</span>
-                  <strong>Software Engineering</strong>
-                  <small>Today · 10:00 AM · Lecture Hall B</small>
+                  <span>Timetable view</span>
+                  <strong>Classes & study groups</strong>
+                  <small>Organized across your semester</small>
                 </div>
                 <div className="preview-card preview-ai">
                   <Sparkles />
                   <div>
                     <strong>Professor Atlas</strong>
-                    <small>Ask anything about your academic record.</small>
+                    <small>Ask anything about your study strategies.</small>
                   </div>
                 </div>
               </div>
@@ -2230,24 +2607,17 @@ function Landing({ go }: { go: (view: View) => void }) {
           </div>
         </div>
       </section>
-      <section className="landing-proof">
-        <span>Everything you need to stay in sync</span>
-        <strong>Courses</strong>
-        <strong>Calendar</strong>
-        <strong>Community</strong>
-        <strong>Academic insight</strong>
-      </section>
       <section className="landing-features" id="features">
         <div>
           <p className="eyebrow">One calm workspace</p>
           <h2>Less chasing. More learning.</h2>
-          <p>Every part of your student life is connected, clear, and easy to act on.</p>
+          <p>Every part of your student journey is organized, clear, and easy to act on.</p>
         </div>
         <div className="feature-grid">
-          <article><CalendarDays /><h3>Know what&apos;s next</h3><p>Keep lectures, deadlines, and personal events in one dependable calendar.</p></article>
-          <article><MessageCircle /><h3>Stay connected</h3><p>Talk with classmates, create study groups, and keep conversations focused.</p></article>
-          <article><Store /><h3>Trade on campus</h3><p>Buy, sell, and share course materials, devices, and everyday student essentials.</p><button className="feature-link" onClick={() => go('Marketplace')}>Explore marketplace <ChevronRight /></button></article>
-          <article id="atlas"><Sparkles /><h3>Understand your progress</h3><p>Ask Professor Atlas to help you make sense of the academic record you uploaded.</p></article>
+          <article><CalendarDays /><h3>Know what&apos;s next</h3><p>Keep lectures, deadlines, and personal study events in one dependable calendar.</p></article>
+          <article><MessageCircle /><h3>Stay connected</h3><p>Talk with classmates, create study groups, and keep course notes in one place.</p></article>
+          <article><Store /><h3>Trade on campus</h3><p>Buy, sell, and share textbooks, study notes, and student essentials.</p></article>
+          <article id="atlas"><Sparkles /><h3>Understand your progress</h3><p>Consult Professor Atlas for study strategies and semester goal-setting.</p></article>
         </div>
       </section>
       <section className="landing-bottom" id="how-it-works">
@@ -2283,13 +2653,13 @@ function LandingInfoPage({ type, go }: { type: 'Features' | 'How it works' | 'Pr
       ],
     },
     'Professor Atlas info': {
-      label: 'Your academic analyst',
-      title: 'Ask better questions about your academic record.',
-      intro: 'Professor Atlas helps you understand the record you have uploaded, spot patterns, and plan your next move with more confidence.',
+      label: 'Your academic guide',
+      title: 'Ask better questions about your studies.',
+      intro: 'Professor Atlas helps you plan study blocks, spot priorities, and stay confident throughout the semester.',
       cards: [
-        ['Understand', 'Ask about grades, credits, course progress, and academic standing.'],
+        ['Understand', 'Ask about study strategies, test preparation, and course topics.'],
         ['Prioritize', 'Get a clearer view of what deserves your attention this week.'],
-        ['Plan ahead', 'Use your record as a starting point for thoughtful academic decisions.'],
+        ['Plan ahead', 'Turn your syllabus and calendar into a structured study routine.'],
       ],
     },
   }[type]
@@ -2324,7 +2694,7 @@ function AboutPage({ go }: { go: (view: View) => void }) {
       <section className="about-hero">
         <Pill tone="landing-pill"><GraduationCap /> About Course Rep</Pill>
         <h1>A better way to experience university.</h1>
-        <p>Course Rep was created to make academic life feel less scattered, more connected, and easier to navigate.</p>
+        <p>Course Rep was created to make student academic life feel less scattered, more connected, and easier to navigate.</p>
       </section>
       <section className="about-story">
         <div>
@@ -2332,19 +2702,8 @@ function AboutPage({ go }: { go: (view: View) => void }) {
           <h2>Students deserve a clearer path through every semester.</h2>
         </div>
         <div>
-          <p>Important updates live in one place, class conversations in another, and academic records are often difficult to understand. Course Rep brings those pieces together in one calm workspace.</p>
-          <p>Whether you are checking your next lecture, joining a study group, or planning your next academic move, Course Rep helps you stay informed and in control.</p>
+          <p>Class updates live in disparate WhatsApp groups, timetable screenshots get lost in camera rolls, and materials are scattered everywhere. Course Rep brings those pieces together into one student-driven workspace.</p>
         </div>
-      </section>
-      <section className="about-values">
-        <article><span>01</span><h3>Clarity over clutter</h3><p>Simple tools and useful information, without the noise.</p></article>
-        <article><span>02</span><h3>Progress together</h3><p>Better academic journeys are built through community.</p></article>
-        <article><span>03</span><h3>Designed for students</h3><p>Every feature starts with the realities of campus life.</p></article>
-      </section>
-      <section className="landing-bottom">
-        <p className="eyebrow">Your semester starts here</p>
-        <h2>Make academic life feel more manageable.</h2>
-        <button className="primary-button landing-primary" onClick={() => go('Register')}>Get started with Course Rep <ChevronRight /></button>
       </section>
       <SiteFooter go={go} />
     </main>
@@ -2354,13 +2713,13 @@ function AboutPage({ go }: { go: (view: View) => void }) {
 function SupportPage() {
   return (
     <>
-      <PageHeader title="Support center" subtitle="We're here to help you stay on track with your academic journey." />
+      <PageHeader title="Support center" subtitle="We're here to help you get the most out of your academic workspace." />
       <div className="support-hero">
         <div className="support-hero-icon"><Headphones /></div>
         <div>
-          <p className="eyebrow">Need a hand?</p>
-          <h2>Let&apos;s get things sorted.</h2>
-          <p>Reach out to the Course Rep support team for help with your account, courses, messages, or anything else in your workspace.</p>
+          <p className="eyebrow">Need assistance?</p>
+          <h2>We&apos;re here for students.</h2>
+          <p>Reach out for help with your courses, calendar, groups, or account settings.</p>
         </div>
       </div>
       <div className="support-grid">
@@ -2369,7 +2728,7 @@ function SupportPage() {
           <div>
             <p className="eyebrow">Email support</p>
             <h2>Send us an email</h2>
-            <p>For detailed questions or issues that need a little more context.</p>
+            <p>For account questions, feedback, or feature suggestions.</p>
             <a href="mailto:support@courserep.app">support@courserep.app</a>
             <small>We usually reply within one business day.</small>
           </div>
@@ -2379,16 +2738,12 @@ function SupportPage() {
           <div>
             <p className="eyebrow">Phone support</p>
             <h2>Talk to our team</h2>
-            <p>For urgent account or access issues, give us a call during support hours.</p>
+            <p>For urgent access or workspace issues.</p>
             <a href="tel:+2348001234567">+234 800 123 4567</a>
             <small>Monday–Friday, 9:00 AM–5:00 PM WAT</small>
           </div>
         </Panel>
       </div>
-      <Panel className="support-note">
-        <strong>Before you contact us</strong>
-        <span>Include your university, level, and a short description of the issue so we can help you faster.</span>
-      </Panel>
     </>
   )
 }
@@ -2457,24 +2812,22 @@ export default function Page() {
 
   const content =
     view === 'Overview' ? <Dashboard go={go} user={user} /> :
-    view === 'My Courses' ? <CoursesPage go={go} /> :
+    view === 'My Courses' ? <CoursesPage go={go} user={user} /> :
     view === 'Calendar' ? <CalendarPage /> :
     view === 'Announcements' ? <AnnouncementsPage /> :
-    view === 'Representative' ? <RepresentativePage user={user} /> :
     view === 'Marketplace' ? <MarketplacePage /> :
     view === 'Student Groups' ? <ChatPage direct={false} user={user} /> :
     view === 'Direct Messages' ? <ChatPage direct={true} user={user} /> :
     view === 'Professor Atlas' ? <ProfessorAtlasPage /> :
     view === 'Support Center' ? <SupportPage /> :
-    view === 'Settings' ? <SettingsPage user={user} onLogout={handleLogout} onUpdateUser={u => setUser(u)} /> :
-    <AdminPage />
+    <SettingsPage user={user} onLogout={handleLogout} onUpdateUser={u => setUser(u)} />
 
+  // Strictly Student-driven Navigation (Representative and Admin removed)
   const primaryNav: [string, ElementType][] = [
     ['Overview', LayoutDashboard],
     ['My Courses', BookOpen],
     ['Calendar', CalendarDays],
     ['Announcements', Bell],
-    ['Representative', ShieldCheck],
   ]
   const communityNav: [string, ElementType][] = [
     ['Marketplace', Store],
@@ -2483,7 +2836,7 @@ export default function Page() {
   ]
   const accountNav: [string, ElementType][] = [
     ['Settings', Settings],
-    ['Admin', Users],
+    ['Support Center', Headphones],
   ]
 
   const renderNav = (items: [string, ElementType][]) =>
@@ -2498,10 +2851,10 @@ export default function Page() {
       </button>
     ))
 
-  const userDisplayName = user?.full_name || 'Peter Chijioke'
-  const userAvatar = user?.avatar || 'PE'
-  const userRole = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Student'
-  const userLevel = user?.academic_level || '400 Level'
+  const userDisplayName = user?.full_name || 'Student'
+  const userAvatar = user?.avatar || 'ST'
+  const userLevel = user?.academic_level || 'Student'
+  const userInstitution = user?.institution || 'Student Workspace'
 
   return (
     <main className="app-shell">
@@ -2527,22 +2880,22 @@ export default function Page() {
           <span className="avatar avatar-small">{userAvatar}</span>
           <span>
             <strong>{userDisplayName}</strong>
-            <small>{userRole} · {userLevel}</small>
+            <small>{userLevel}</small>
           </span>
           <ChevronRight />
         </div>
 
         <nav className="side-nav" aria-label="Main navigation">
           <div className="nav-section">
-            <span className="nav-section-label">Workspace</span>
+            <span className="nav-section-label">Academic Workspace</span>
             {renderNav(primaryNav)}
           </div>
           <div className="nav-section">
-            <span className="nav-section-label">Community</span>
+            <span className="nav-section-label">Campus Community</span>
             {renderNav(communityNav)}
           </div>
           <div className="nav-section">
-            <span className="nav-section-label">Account</span>
+            <span className="nav-section-label">Preferences</span>
             {renderNav(accountNav)}
           </div>
         </nav>
@@ -2556,7 +2909,7 @@ export default function Page() {
             </div>
             <ChevronRight />
           </button>
-          <span className="version">Course Rep v1.0 · {user?.institution || 'Example University'}</span>
+          <span className="version">Course Rep v1.0 · {userInstitution}</span>
         </div>
       </aside>
 

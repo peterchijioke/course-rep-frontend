@@ -8,7 +8,7 @@ export interface User {
   id: number
   full_name: string
   email: string
-  role: 'student' | 'representative' | 'admin'
+  role: string
   institution: string
   department: string
   academic_level: string
@@ -30,6 +30,17 @@ export interface Course {
   unread?: number
 }
 
+export interface CreateCourseDTO {
+  code: string
+  name: string
+  color?: string
+  department?: string
+  level?: string
+  lecturer_name?: string
+  lecture_venue?: string
+  next_lecture?: string
+}
+
 export interface AnnouncementItem {
   id: number
   course_code: string
@@ -39,6 +50,13 @@ export interface AnnouncementItem {
   is_urgent: boolean
   is_read: boolean
   created_at: string
+}
+
+export interface CreateAnnouncementDTO {
+  course_code: string
+  title: string
+  body: string
+  is_urgent?: boolean
 }
 
 export interface TimetableSlot {
@@ -55,6 +73,16 @@ export interface TimetableSlot {
   tone: string
   is_personal: boolean
   removable: boolean
+}
+
+export interface CreateEventDTO {
+  title: string
+  course?: string
+  date: string
+  start?: string
+  end?: string
+  location?: string
+  tone?: string
 }
 
 export interface MarketplaceItem {
@@ -90,28 +118,6 @@ export interface ChatMessage {
   created_at: string
 }
 
-export interface RepresentativeActivityLog {
-  id: number
-  rep_id: number
-  rep_name: string
-  action: string
-  course_code?: string
-  description: string
-  created_at: string
-}
-
-export interface RepresentativeApplication {
-  id: number
-  user_id: number
-  applicant_name: string
-  applicant_email: string
-  course_id: number
-  course_code: string
-  status: 'Pending' | 'Approved' | 'Rejected'
-  reason?: string
-  submitted_at: string
-}
-
 export interface AcademicRecord {
   id: number
   user_id: number
@@ -122,12 +128,6 @@ export interface AcademicRecord {
   pending_assessments: number
   active_courses_count: number
   last_synced_at: string
-}
-
-export interface AdminStats {
-  total_students: number
-  active_courses: number
-  pending_applications: number
 }
 
 export async function apiRequest<T>(
