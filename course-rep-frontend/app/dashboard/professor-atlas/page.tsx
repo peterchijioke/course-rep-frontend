@@ -30,8 +30,8 @@ import { Panel } from '@/components/panel'
 import { Pill } from '@/components/pill'
 import { getEnrolledCourses, type Course } from '@/lib/data'
 import { defaultUserProfile, getUserProfile, type UserProfile } from '@/lib/user-profile'
-import { getAcademicHistory, type AcademicHistory, GRADE_POINT_MAP } from '@/lib/academic-records'
-import { api } from '@/lib/api'
+import { getAcademicHistory, recalculateAcademicHistory, type AcademicHistory, GRADE_POINT_MAP } from '@/lib/academic-records'
+import { api, getAtlasWebSocketUrl } from '@/lib/api'
 
 interface AuditCourseItem {
   code: string
@@ -94,10 +94,14 @@ const DEFAULT_SUGGESTIONS = [
 export default function ProfessorAtlasPage() {
   const [mounted, setMounted] = useState(false)
   const [profile, setProfile] = useState<UserProfile>(defaultUserProfile)
-  const [history, setHistory] = useState<AcademicHistory>(() => getAcademicHistory())
+  const [history, setHistory] = useState<AcademicHistory>(() => recalculateAcademicHistory([]))
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([])
   const [question, setQuestion] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
+  const [streamStatusMessage, setStreamStatusMessage] = useState<string | null>(null)
+  const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimeoutRef = useRef<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Voice Transcriber & Audio Output States
@@ -224,6 +228,112 @@ export default function ProfessorAtlasPage() {
   }
 
   const [backendRecord, setBackendRecord] = useState<any>(null)
+
+  // Real-time WebSocket connection to Professor Atlas Intelligence Stream
+  const connectWebSocket = () => {
+    if (typeof window === 'undefined') return
+
+    if (wsRef.current) {
+      try {
+        wsRef.current.close()
+      } catch {}
+      wsRef.current = null
+    }
+
+    setWsStatus('connecting')
+    const wsUrl = getAtlasWebSocketUrl()
+
+    try {
+      const socket = new WebSocket(wsUrl)
+      wsRef.current = socket
+
+      socket.onopen = () => {
+        setWsStatus('connected')
+        setStreamStatusMessage(null)
+      }
+
+      socket.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data)
+          if (payload.type === 'connected') {
+            setWsStatus('connected')
+            if (payload.record) {
+              setBackendRecord(payload.record)
+            }
+          } else if (payload.type === 'thinking') {
+            setIsTyping(true)
+            setStreamStatusMessage(payload.message || 'Prof. Zikora is evaluating your course progress and records...')
+          } else if (payload.type === 'answer') {
+            setIsTyping(false)
+            setStreamStatusMessage(null)
+            if (payload.answer) {
+              const responseMsg: ChatMessage = {
+                id: `atlas-${Date.now()}`,
+                sender: 'atlas',
+                text: payload.answer,
+                timestamp: 'Just now',
+                suggestions: DEFAULT_SUGGESTIONS.slice(0, 3),
+              }
+              setMessages((prev) => [...prev, responseMsg])
+              if (voiceAutoSpeak) {
+                speakText(responseMsg.text, responseMsg.id)
+              }
+            }
+            if (payload.record) {
+              setBackendRecord(payload.record)
+            }
+          } else if (payload.type === 'error') {
+            setIsTyping(false)
+            setStreamStatusMessage(null)
+            const errorMsg: ChatMessage = {
+              id: `atlas-err-${Date.now()}`,
+              sender: 'atlas',
+              text: `⚠️ **Prof. Zikora**: ${payload.message || 'An error occurred while generating the advice.'}`,
+              timestamp: 'Just now',
+            }
+            setMessages((prev) => [...prev, errorMsg])
+          }
+        } catch (e) {
+          console.warn('Failed to parse Atlas WS message:', e)
+        }
+      }
+
+      socket.onerror = () => {
+        setWsStatus('disconnected')
+      }
+
+      socket.onclose = () => {
+        setWsStatus('disconnected')
+        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectWebSocket()
+        }, 3500)
+      }
+    } catch (err) {
+      console.warn('Atlas WebSocket connection error:', err)
+      setWsStatus('disconnected')
+    }
+  }
+
+  useEffect(() => {
+    connectWebSocket()
+
+    const pingInterval = setInterval(() => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'ping' }))
+      }
+    }, 25000)
+
+    return () => {
+      clearInterval(pingInterval)
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current)
+      if (wsRef.current) {
+        try {
+          wsRef.current.close()
+        } catch {}
+      }
+    }
+  }, [])
 
   // Listen to profile, records, and courses updates across tabs + sync backend record
   useEffect(() => {
@@ -398,7 +508,7 @@ export default function ProfessorAtlasPage() {
     }
   }, [mounted, backendRecord, history, enrolledCourses, profile])
 
-  // Intelligent Contextual Responses Engine - all responses now query the backend Gemini AI
+  // Intelligent Contextual Responses Engine - sent over real-time WebSocket with HTTP fallback
   const handleSendMessage = async (textToSend?: string) => {
     const raw = textToSend || question
     const trimmed = raw.trim()
@@ -415,7 +525,21 @@ export default function ProfessorAtlasPage() {
     setQuestion('')
     setIsTyping(true)
 
+    // 1. Send via WebSocket if open
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      setStreamStatusMessage('Prof. Zikora is consulting your academic records and curriculum...')
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'ask',
+          question: trimmed,
+        })
+      )
+      return
+    }
+
+    // 2. HTTP Fallback if WebSocket is connecting or offline
     try {
+      setStreamStatusMessage('Connecting via HTTP Fallback...')
       const res: any = await api.atlas.ask(trimmed)
       const answer = res?.answer || res?.data?.answer
       if (answer) {
@@ -428,6 +552,7 @@ export default function ProfessorAtlasPage() {
         }
         setMessages((prev) => [...prev, response])
         setIsTyping(false)
+        setStreamStatusMessage(null)
 
         if (voiceAutoSpeak) {
           speakText(response.text, response.id)
@@ -446,6 +571,7 @@ export default function ProfessorAtlasPage() {
       }
       setMessages((prev) => [...prev, response])
       setIsTyping(false)
+      setStreamStatusMessage(null)
     }
   }
 
@@ -548,22 +674,49 @@ export default function ProfessorAtlasPage() {
                 </p>
               </div>
             </div>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                fontSize: '11px',
-                fontWeight: 650,
-                color: '#0f766e',
-                background: 'rgba(20, 184, 166, 0.1)',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                border: '1px solid rgba(20, 184, 166, 0.2)',
-              }}
-            >
-              <ShieldCheck style={{ width: '13px' }} /> Verified NUC Formula
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: wsStatus === 'connected' ? '#10b981' : wsStatus === 'connecting' ? '#f59e0b' : '#94a3b8',
+                  background: wsStatus === 'connected' ? 'rgba(16, 185, 129, 0.12)' : wsStatus === 'connecting' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(148, 163, 184, 0.1)',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: `1px solid ${wsStatus === 'connected' ? 'rgba(16, 185, 129, 0.28)' : wsStatus === 'connecting' ? 'rgba(245, 158, 11, 0.28)' : 'rgba(148, 163, 184, 0.2)'}`,
+                }}
+              >
+                <span
+                  style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    backgroundColor: wsStatus === 'connected' ? '#10b981' : wsStatus === 'connecting' ? '#f59e0b' : '#94a3b8',
+                    display: 'inline-block',
+                  }}
+                />
+                {wsStatus === 'connected' ? 'WebSocket Live Stream' : wsStatus === 'connecting' ? 'Connecting Stream...' : 'HTTP Fallback'}
+              </span>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '11px',
+                  fontWeight: 650,
+                  color: '#0f766e',
+                  background: 'rgba(20, 184, 166, 0.1)',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(20, 184, 166, 0.2)',
+                }}
+              >
+                <ShieldCheck style={{ width: '13px' }} /> Verified NUC Formula
+              </span>
+            </div>
           </div>
 
           {/* Messages Stream */}
@@ -800,7 +953,7 @@ export default function ProfessorAtlasPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px' }}>
                   <Sparkles style={{ width: '14px', height: '14px', color: '#0f766e' }} />
                   <span style={{ fontSize: '12px', color: 'var(--muted-foreground)', fontStyle: 'italic' }}>
-                    Prof. Zikora is recalculating academic records and grade matrices...
+                    {streamStatusMessage || 'Prof. Zikora is recalculating academic records and grade matrices...'}
                   </span>
                 </div>
               </div>

@@ -60,6 +60,12 @@ export function getWebSocketUrl(explicitToken?: string): string {
   return `${wsBase}/chat/ws?token=${encodeURIComponent(token || '')}`
 }
 
+export function getAtlasWebSocketUrl(explicitToken?: string): string {
+  const token = explicitToken || getAuthToken()
+  let wsBase = API_BASE_URL.replace(/^http:\/\//i, 'ws://').replace(/^https:\/\//i, 'wss://')
+  return `${wsBase}/atlas/ws?token=${encodeURIComponent(token || '')}`
+}
+
 export interface User {
   id: number
   full_name: string
