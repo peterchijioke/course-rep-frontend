@@ -414,8 +414,19 @@ export default function ProfessorAtlasPage() {
 
     if (q.includes('first class') || q.includes('cgpa') || q.includes('honours') || q.includes('graduate')) {
       const currentPts = history.overallPoints
+      const totalUnits = unitsEarned + registeredUnits
+      if (totalUnits === 0) {
+        return {
+          id: `atlas-${Date.now()}`,
+          sender: 'atlas',
+          text: `Your academic profile currently shows 0 completed credits and 0 registered courses. To calculate your mathematical path to First Class Honours (4.50+), please enroll in your semester courses in **Courses** or record your semester results in **Academic Records**.`,
+          timestamp: 'Just now',
+          suggestions: DEFAULT_SUGGESTIONS.slice(0, 3),
+        }
+      }
+
       const projectedPoints4As = currentPts + registeredUnits * 5
-      const projectedCGPA4As = (projectedPoints4As / (unitsEarned + registeredUnits)).toFixed(2)
+      const projectedCGPA4As = (projectedPoints4As / totalUnits).toFixed(2)
 
       return {
         id: `atlas-${Date.now()}`,
@@ -441,6 +452,16 @@ export default function ProfessorAtlasPage() {
     }
 
     if (q.includes('schedule') || q.includes('plan') || q.includes('revision') || q.includes('study')) {
+      if (courses.length === 0) {
+        return {
+          id: `atlas-${Date.now()}`,
+          sender: 'atlas',
+          text: `You do not have any courses enrolled for this semester yet. Once you enroll in your courses in **Courses**, I will generate an optimized weekly study timetable tailored to your credit units and assessment deadlines.`,
+          timestamp: 'Just now',
+          suggestions: DEFAULT_SUGGESTIONS.slice(0, 3),
+        }
+      }
+
       return {
         id: `atlas-${Date.now()}`,
         sender: 'atlas',
@@ -463,9 +484,20 @@ export default function ProfessorAtlasPage() {
     }
 
     if (q.includes('b') || q.includes('simulate') || q.includes('worst') || q.includes('scenario')) {
+      const totalUnits = unitsEarned + registeredUnits
+      if (totalUnits === 0) {
+        return {
+          id: `atlas-${Date.now()}`,
+          sender: 'atlas',
+          text: `Simulation requires registered courses or transcript units. Please enroll in your courses first in **Courses**.`,
+          timestamp: 'Just now',
+          suggestions: DEFAULT_SUGGESTIONS.slice(0, 3),
+        }
+      }
+
       const currentPts = history.overallPoints
       const projectedPointsBs = currentPts + registeredUnits * 4
-      const projectedCGPABs = (projectedPointsBs / (unitsEarned + registeredUnits)).toFixed(2)
+      const projectedCGPABs = (projectedPointsBs / totalUnits).toFixed(2)
 
       return {
         id: `atlas-${Date.now()}`,
@@ -517,12 +549,13 @@ export default function ProfessorAtlasPage() {
     setIsTyping(true)
 
     try {
-      const res = await api.atlas.ask(trimmed)
-      if (res && res.data && res.data.answer) {
+      const res: any = await api.atlas.ask(trimmed)
+      const answer = res?.answer || res?.data?.answer
+      if (answer) {
         const response: ChatMessage = {
           id: `atlas-${Date.now()}`,
           sender: 'atlas',
-          text: res.data.answer,
+          text: answer,
           timestamp: 'Just now',
           suggestions: DEFAULT_SUGGESTIONS.slice(0, 3),
         }
