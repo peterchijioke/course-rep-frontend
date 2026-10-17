@@ -519,17 +519,16 @@ export function saveAcademicSemesters(semesters: string[]): string[] {
 
 export function getEnrolledCourses(): Course[] {
   if (typeof window === 'undefined') {
-    return courses
+    return []
   }
   try {
     const raw = localStorage.getItem(ENROLLED_COURSES_STORAGE_KEY)
     if (!raw) {
-      localStorage.setItem(ENROLLED_COURSES_STORAGE_KEY, JSON.stringify(courses))
-      return courses
+      return []
     }
     return JSON.parse(raw) as Course[]
   } catch {
-    return courses
+    return []
   }
 }
 
