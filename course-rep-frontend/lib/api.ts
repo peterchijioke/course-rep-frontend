@@ -1,8 +1,8 @@
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://course-rep-backend.onrender.com/api/v1'
+  process.env.NEXT_PUBLIC_API_URL
 
 export const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || 'https://course-rep-backend.onrender.com'
+  process.env.NEXT_PUBLIC_BACKEND_URL 
 
 export interface User {
   id: number
