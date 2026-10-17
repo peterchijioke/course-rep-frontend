@@ -80,7 +80,7 @@ export default function DashboardOverviewPage() {
       // Fetch announcements
       try {
         const anns = await api.announcements.getAll()
-        setAnnouncementsList(anns || [])
+        setAnnouncementsList(Array.isArray(anns) ? anns : [])
       } catch (e) {
         setAnnouncementsList([])
       }
@@ -226,9 +226,9 @@ export default function DashboardOverviewPage() {
           </div>
           <div>
             <span>Announcements</span>
-            <strong>{announcementsList.length}</strong>
-            <small className={announcementsList.some((a) => !a.is_read) ? 'warning-text' : ''}>
-              {announcementsList.filter((a) => !a.is_read).length} unread updates
+            <strong>{Array.isArray(announcementsList) ? announcementsList.length : 0}</strong>
+            <small className={Array.isArray(announcementsList) && announcementsList.some((a) => !a.is_read) ? 'warning-text' : ''}>
+              {Array.isArray(announcementsList) ? announcementsList.filter((a) => !a.is_read).length : 0} unread updates
             </small>
           </div>
         </div>
@@ -261,7 +261,7 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
           <div className="announcement-list">
-            {announcementsList.length === 0 ? (
+            {!Array.isArray(announcementsList) || announcementsList.length === 0 ? (
               <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
                 No announcements broadcasted yet.
               </div>

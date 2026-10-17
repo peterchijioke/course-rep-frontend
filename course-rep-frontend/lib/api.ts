@@ -264,7 +264,12 @@ export const api = {
       }),
   },
   announcements: {
-    getAll: () => apiRequest<AnnouncementItem[]>('/announcements'),
+    getAll: async (): Promise<AnnouncementItem[]> => {
+      const res = await apiRequest<any>('/announcements')
+      if (Array.isArray(res)) return res
+      if (res && Array.isArray(res.items)) return res.items
+      return []
+    },
     create: (dto: CreateAnnouncementDTO) =>
       apiRequest<AnnouncementItem>('/announcements', {
         method: 'POST',
