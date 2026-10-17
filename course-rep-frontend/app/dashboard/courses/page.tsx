@@ -56,6 +56,7 @@ import {
   type StudyGroup,
 } from '@/lib/data'
 import { getUserProfile } from '@/lib/user-profile'
+import { api } from '@/lib/api'
 
 interface Toast {
   id: string
@@ -110,12 +111,31 @@ export default function CoursesPage() {
     [coursesInActiveCurrentSemester]
   )
 
+  const [backendCatalog, setBackendCatalog] = useState<any[]>([])
+
   // Sync courses with localStorage / other tabs & check query params
   useEffect(() => {
     const handleCoursesUpdate = () => setCourseList(getEnrolledCourses())
     const handleLevelsUpdate = () => setLevels(getAcademicLevels())
     const handleSemestersUpdate = () => setSemesters(getAcademicSemesters())
     const handleProfileUpdate = () => setUserProfile(getUserProfile())
+
+    // 1. Fetch live catalog courses from backend database
+    api.courses.getAll().then((data: any) => {
+      const list = Array.isArray(data) ? data : data?.data
+      if (Array.isArray(list) && list.length > 0) {
+        setBackendCatalog(list)
+      }
+    }).catch(() => {})
+
+    // 2. Fetch live enrolled courses from backend database
+    api.courses.getMyEnrolled().then((data: any) => {
+      const list = Array.isArray(data) ? data : data?.data
+      if (Array.isArray(list) && list.length > 0) {
+        setCourseList(list)
+        saveEnrolledCourses(list)
+      }
+    }).catch(() => {})
 
     window.addEventListener('enrolled-courses-updated', handleCoursesUpdate)
     window.addEventListener('academic-levels-updated', handleLevelsUpdate)
@@ -318,10 +338,13 @@ export default function CoursesPage() {
   }
 
   // Course Actions
-  const handleJoinCatalogCourse = (catalogItem: Course) => {
+  const handleJoinCatalogCourse = (catalogItem: any) => {
     if (courseList.some((c) => c.code === catalogItem.code)) {
       triggerToast(`You are already enrolled in ${catalogItem.code}`, 'info')
       return
+    }
+    if (catalogItem.id) {
+      api.courses.join(catalogItem.id).catch((err) => console.warn('Backend enroll error:', err))
     }
     const enrolledItem: Course = {
       ...catalogItem,
@@ -2112,29 +2135,34 @@ export default function CoursesPage() {
                   Recommended curriculum courses for <strong>{selectedLevel} · {selectedSemester}</strong>:
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '420px', overflowY: 'auto' }}>
-                  {availableCatalogCourses.length === 0 ? (
-                    <div style={{ padding: '36px 16px', textAlign: 'center', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-                      <BookOpen style={{ width: '28px', height: '28px', color: '#6366f1', margin: '0 auto 10px', opacity: 0.8 }} />
-                      <h4 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 600 }}>No Pre-seeded Courses</h4>
-                      <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--muted-foreground)', maxWidth: '360px', marginLeft: 'auto', marginRight: 'auto' }}>
-                        No mock or pre-loaded courses exist for {selectedLevel}. You can register any real course using the custom course form.
-                      </p>
-                      <button
-                        type="button"
-                        className="primary-button"
-                        onClick={() => setJoinTab('custom')}
-                        style={{ fontSize: '12px', padding: '7px 16px' }}
-                      >
-                        <Plus style={{ width: '13px', marginRight: '6px' }} /> Open Custom Course Form
-                      </button>
-                    </div>
-                  ) : (
-                    availableCatalogCourses
-                      .filter((c) => {
+                  {(() => {
+                    const catalogToDisplay = backendCatalog.length > 0 ? backendCatalog : availableCatalogCourses
+                    if (catalogToDisplay.length === 0) {
+                      return (
+                        <div style={{ padding: '36px 16px', textAlign: 'center', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+                          <BookOpen style={{ width: '28px', height: '28px', color: '#6366f1', margin: '0 auto 10px', opacity: 0.8 }} />
+                          <h4 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 600 }}>No Course Catalog Entries</h4>
+                          <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--muted-foreground)', maxWidth: '360px', marginLeft: 'auto', marginRight: 'auto' }}>
+                            No courses found for {selectedLevel}. You can register any real course using the custom course form.
+                          </p>
+                          <button
+                            type="button"
+                            className="primary-button"
+                            onClick={() => setJoinTab('custom')}
+                            style={{ fontSize: '12px', padding: '7px 16px' }}
+                          >
+                            <Plus style={{ width: '13px', marginRight: '6px' }} /> Open Custom Course Form
+                          </button>
+                        </div>
+                      )
+                    }
+
+                    return catalogToDisplay
+                      .filter((c: any) => {
                         if (c.level && c.level === selectedLevel) return true
                         return true
                       })
-                      .map((item) => {
+                      .map((item: any) => {
                         const isAlreadyEnrolled = courseList.some((c) => c.code === item.code)
                         return (
                           <div
@@ -2185,7 +2213,7 @@ export default function CoursesPage() {
                           </div>
                         )
                       })
-                  )}
+                  })()}
                 </div>
               </div>
             ) : (
