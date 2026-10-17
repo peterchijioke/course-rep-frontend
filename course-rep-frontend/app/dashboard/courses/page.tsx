@@ -48,6 +48,8 @@ import {
   saveAcademicLevels,
   getAcademicSemesters,
   saveAcademicSemesters,
+  DEFAULT_ACADEMIC_LEVELS,
+  DEFAULT_ACADEMIC_SEMESTERS,
   type Course,
   type CourseMaterial,
   type CourseAssessment,
@@ -55,7 +57,7 @@ import {
   type CourseAnnouncement,
   type StudyGroup,
 } from '@/lib/data'
-import { getUserProfile } from '@/lib/user-profile'
+import { getUserProfile, defaultUserProfile, type UserProfile } from '@/lib/user-profile'
 import { api } from '@/lib/api'
 
 interface Toast {
@@ -65,17 +67,12 @@ interface Toast {
 }
 
 export default function CoursesPage() {
-  const [courseList, setCourseList] = useState<Course[]>(() => getEnrolledCourses())
-  const [userProfile, setUserProfile] = useState(() => getUserProfile())
-  const [levels, setLevels] = useState<string[]>(() => getAcademicLevels())
-  const [semesters, setSemesters] = useState<string[]>(() => getAcademicSemesters())
-  const [selectedLevel, setSelectedLevel] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const p = getUserProfile()
-      if (p.level) return p.level
-    }
-    return '400 Level'
-  })
+  const [mounted, setMounted] = useState(false)
+  const [courseList, setCourseList] = useState<Course[]>([])
+  const [userProfile, setUserProfile] = useState<UserProfile>(defaultUserProfile)
+  const [levels, setLevels] = useState<string[]>(DEFAULT_ACADEMIC_LEVELS)
+  const [semesters, setSemesters] = useState<string[]>(DEFAULT_ACADEMIC_SEMESTERS)
+  const [selectedLevel, setSelectedLevel] = useState<string>('400 Level')
   const [selectedSemester, setSelectedSemester] = useState<string>('First Semester')
 
   // Multi-Stage Hierarchy Navigation: 'levels' | 'semesters' | 'courses'
@@ -115,6 +112,14 @@ export default function CoursesPage() {
 
   // Sync courses with localStorage / other tabs & check query params
   useEffect(() => {
+    setMounted(true)
+    setCourseList(getEnrolledCourses())
+    const p = getUserProfile()
+    setUserProfile(p)
+    if (p.level) setSelectedLevel(p.level)
+    setLevels(getAcademicLevels())
+    setSemesters(getAcademicSemesters())
+
     const handleCoursesUpdate = () => setCourseList(getEnrolledCourses())
     const handleLevelsUpdate = () => setLevels(getAcademicLevels())
     const handleSemestersUpdate = () => setSemesters(getAcademicSemesters())
