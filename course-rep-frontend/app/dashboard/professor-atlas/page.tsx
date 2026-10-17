@@ -92,9 +92,10 @@ const DEFAULT_SUGGESTIONS = [
 ]
 
 export default function ProfessorAtlasPage() {
+  const [mounted, setMounted] = useState(false)
   const [profile, setProfile] = useState<UserProfile>(defaultUserProfile)
   const [history, setHistory] = useState<AcademicHistory>(() => getAcademicHistory())
-  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>(() => getEnrolledCourses())
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([])
   const [question, setQuestion] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -226,13 +227,15 @@ export default function ProfessorAtlasPage() {
 
   // Listen to profile, records, and courses updates across tabs + sync backend record
   useEffect(() => {
+    setMounted(true)
     setProfile(getUserProfile())
     setHistory(getAcademicHistory())
     setEnrolledCourses(getEnrolledCourses())
 
-    api.atlas.getRecord().then((res) => {
-      if (res && res.data) {
-        setBackendRecord(res.data)
+    api.atlas.getRecord().then((res: any) => {
+      const rec = res?.data || res
+      if (rec && (rec.cgpa !== undefined || rec.completed_credits !== undefined)) {
+        setBackendRecord(rec)
       }
     }).catch(() => {})
 
@@ -343,6 +346,18 @@ export default function ProfessorAtlasPage() {
     setMessages([createInitialAuditMessage()])
     setQuestion('')
   }
+
+  // Update initial message once client data and backend record hydrate
+  useEffect(() => {
+    if (mounted) {
+      setMessages((prev) => {
+        if (prev.length <= 1 && prev[0]?.isInitialAudit) {
+          return [createInitialAuditMessage()]
+        }
+        return prev
+      })
+    }
+  }, [mounted, backendRecord, history, enrolledCourses, profile])
 
   // Intelligent Contextual Responses Engine
   const generateAtlasResponse = (query: string): ChatMessage => {
