@@ -31,6 +31,7 @@ import { Pill } from '@/components/pill'
 import { getEnrolledCourses, type Course } from '@/lib/data'
 import { defaultUserProfile, getUserProfile, type UserProfile } from '@/lib/user-profile'
 import { getAcademicHistory, type AcademicHistory, GRADE_POINT_MAP } from '@/lib/academic-records'
+import { api } from '@/lib/api'
 
 interface AuditCourseItem {
   code: string
@@ -221,11 +222,19 @@ export default function ProfessorAtlasPage() {
     }
   }
 
-  // Listen to profile, records, and courses updates across tabs
+  const [backendRecord, setBackendRecord] = useState<any>(null)
+
+  // Listen to profile, records, and courses updates across tabs + sync backend record
   useEffect(() => {
     setProfile(getUserProfile())
     setHistory(getAcademicHistory())
     setEnrolledCourses(getEnrolledCourses())
+
+    api.atlas.getRecord().then((res) => {
+      if (res && res.data) {
+        setBackendRecord(res.data)
+      }
+    }).catch(() => {})
 
     const handleProfileUpdate = () => setProfile(getUserProfile())
     const handleHistoryUpdate = () => {
@@ -245,11 +254,20 @@ export default function ProfessorAtlasPage() {
 
   // Active semester & course performance audit data
   const auditComputation = useMemo(() => {
-    const currentCGPA = history.overallCGPA.toFixed(2)
-    const degreeClass = history.degreeClass.title
+    const hasLocalHistory = history.semesters.length > 0 && history.overallCGPA > 0
+    const currentCGPA = hasLocalHistory
+      ? history.overallCGPA.toFixed(2)
+      : backendRecord?.cgpa ? Number(backendRecord.cgpa).toFixed(2) : history.overallCGPA.toFixed(2)
+
+    const degreeClass = hasLocalHistory
+      ? history.degreeClass.title
+      : backendRecord?.cgpa
+        ? (backendRecord.cgpa >= 4.5 ? 'First Class Honours (1st)' : backendRecord.cgpa >= 3.5 ? 'Second Class Upper (2:1)' : 'Second Class Lower (2:2)')
+        : history.degreeClass.title
+
     const targetCGPA = profile.targetCGPA || history.targetCGPA || 4.52
-    const unitsEarned = history.totalUnitsEarned
-    const unitsRequired = history.totalUnitsRequired
+    const unitsEarned = hasLocalHistory ? history.totalUnitsEarned : (backendRecord?.completed_credits ?? history.totalUnitsEarned)
+    const unitsRequired = hasLocalHistory ? history.totalUnitsRequired : (backendRecord?.total_credits ?? history.totalUnitsRequired)
     const remainingUnits = Math.max(0, unitsRequired - unitsEarned)
     const activeSem = history.semesters.find((s) => s.status === 'in_progress') || history.semesters[history.semesters.length - 1]
 
@@ -285,7 +303,7 @@ export default function ProfessorAtlasPage() {
       registeredUnits,
       courses: coursesData,
     }
-  }, [history, enrolledCourses, profile])
+  }, [history, enrolledCourses, profile, backendRecord])
 
   // Build the initial streamlined analysis message
   const createInitialAuditMessage = (): ChatMessage => {
@@ -356,7 +374,20 @@ export default function ProfessorAtlasPage() {
     }
 
     if (q.includes('risk') || q.includes('weak') || q.includes('bottleneck') || q.includes('prioritize') || q.includes('focus')) {
-      const riskCourse = highestRisk || { code: 'CSC 405', name: 'Computer Networks', units: 3, caScore: 22, minExamForA: 48 }
+      if (!highestRisk) {
+        return {
+          id: `atlas-${Date.now()}`,
+          sender: 'atlas',
+          text: `You currently do not have any registered courses with continuous assessment (CA) scores. Please head over to **Courses** to register your semester courses or enter your marks in **Academic Records** to enable bottleneck analysis.`,
+          timestamp: 'Just now',
+          suggestions: [
+            { label: "📚 Go to Course Catalog", prompt: "How do I register for my courses?" },
+            { label: "📈 Academic standing", prompt: "Show my overall CGPA standing." },
+          ],
+        }
+      }
+
+      const riskCourse = highestRisk
 
       return {
         id: `atlas-${Date.now()}`,
@@ -371,7 +402,7 @@ export default function ProfessorAtlasPage() {
             { label: 'Exam Safe Pass', value: `23 / 70 for 'C'`, tone: 'success' },
             { label: 'Credit Multiplier', value: `${riskCourse.units} Units (${riskCourse.units * 5} QP at 'A')` },
           ],
-          note: `Dedicate at least 35% of your weekly study hours to ${riskCourse.code} past exam papers and subnetting/lab questions.`,
+          note: `Dedicate at least 35% of your weekly study hours to ${riskCourse.code} past exam papers and tutorial questions.`,
         },
         suggestions: [
           { label: "🗓️ Generate revision plan", prompt: "Generate a weekly exam preparation and revision schedule weighted by each course's credit units and CA gaps." },
@@ -469,7 +500,7 @@ export default function ProfessorAtlasPage() {
   }
 
   // Handle user submitting message
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string) => {
     const raw = textToSend || question
     const trimmed = raw.trim()
     if (!trimmed) return
@@ -485,15 +516,35 @@ export default function ProfessorAtlasPage() {
     setQuestion('')
     setIsTyping(true)
 
-    setTimeout(() => {
-      const response = generateAtlasResponse(trimmed)
-      setMessages((prev) => [...prev, response])
-      setIsTyping(false)
+    try {
+      const res = await api.atlas.ask(trimmed)
+      if (res && res.data && res.data.answer) {
+        const response: ChatMessage = {
+          id: `atlas-${Date.now()}`,
+          sender: 'atlas',
+          text: res.data.answer,
+          timestamp: 'Just now',
+          suggestions: DEFAULT_SUGGESTIONS.slice(0, 3),
+        }
+        setMessages((prev) => [...prev, response])
+        setIsTyping(false)
 
-      if (voiceAutoSpeak) {
-        speakText(response.text, response.id)
+        if (voiceAutoSpeak) {
+          speakText(response.text, response.id)
+        }
+        return
       }
-    }, 550)
+    } catch (err) {
+      console.warn('Backend Atlas AI error, falling back to local computation:', err)
+    }
+
+    const response = generateAtlasResponse(trimmed)
+    setMessages((prev) => [...prev, response])
+    setIsTyping(false)
+
+    if (voiceAutoSpeak) {
+      speakText(response.text, response.id)
+    }
   }
 
   const handleFormSubmit = (e: React.FormEvent) => {

@@ -98,9 +98,9 @@ export interface AcademicHistory {
   updatedAt: string
 }
 
-export const ACADEMIC_RECORDS_STORAGE_KEY = 'courserep_academic_records_v1'
+export const ACADEMIC_RECORDS_STORAGE_KEY = 'courserep_academic_records_v2'
 
-// Default starter transcript records matching the student's 118 units / 4.38 CGPA
+// Default starter transcript records matching real user database
 export const defaultSemesterRecords: SemesterGradeRecord[] = []
 
 export function recalculateAcademicHistory(semesters: SemesterGradeRecord[]): AcademicHistory {
@@ -228,22 +228,25 @@ export function syncEnrolledCoursesWithSemester(semesters: SemesterGradeRecord[]
 
 export function getAcademicHistory(): AcademicHistory {
   if (typeof window === 'undefined') {
-    return recalculateAcademicHistory(defaultSemesterRecords)
+    return recalculateAcademicHistory([])
   }
 
   try {
+    // Purge legacy mock transcripts from earlier runs
+    localStorage.removeItem('courserep_academic_records_v1')
+
     const raw = localStorage.getItem(ACADEMIC_RECORDS_STORAGE_KEY)
     if (!raw) {
-      const syncedDefault = syncEnrolledCoursesWithSemester(defaultSemesterRecords)
-      const initial = recalculateAcademicHistory(syncedDefault)
-      localStorage.setItem(ACADEMIC_RECORDS_STORAGE_KEY, JSON.stringify(initial.semesters))
-      return initial
+      return recalculateAcademicHistory([])
     }
     const parsedSemesters = JSON.parse(raw) as SemesterGradeRecord[]
+    if (!Array.isArray(parsedSemesters)) {
+      return recalculateAcademicHistory([])
+    }
     const syncedSemesters = syncEnrolledCoursesWithSemester(parsedSemesters)
     return recalculateAcademicHistory(syncedSemesters)
   } catch {
-    return recalculateAcademicHistory(defaultSemesterRecords)
+    return recalculateAcademicHistory([])
   }
 }
 
