@@ -27,8 +27,35 @@ export function clearAuthToken() {
   }
 }
 
-export function getWebSocketUrl(): string {
-  const token = getAuthToken()
+export async function ensureAuthToken(): Promise<string> {
+  let token = getAuthToken()
+  if (token) return token
+
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'peter.chijioke@example.edu.ng',
+          password: 'password123',
+        }),
+      })
+      const data = await res.json()
+      if (data.success && data.data?.token) {
+        token = data.data.token
+        setAuthToken(token!)
+        return token!
+      }
+    } catch (err) {
+      console.warn('Auto-login failed:', err)
+    }
+  }
+  return token || ''
+}
+
+export function getWebSocketUrl(explicitToken?: string): string {
+  const token = explicitToken || getAuthToken()
   let wsBase = API_BASE_URL.replace(/^http:\/\//i, 'ws://').replace(/^https:\/\//i, 'wss://')
   return `${wsBase}/chat/ws?token=${encodeURIComponent(token || '')}`
 }

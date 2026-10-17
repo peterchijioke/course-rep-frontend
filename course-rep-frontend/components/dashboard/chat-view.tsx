@@ -75,126 +75,14 @@ interface DirectContact {
   time: string
 }
 
-const sprintArchSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" viewBox="0 0 600 380"><rect width="600" height="380" fill="%230f172a" rx="12"/><rect x="15" y="15" width="570" height="350" fill="%231e293b" rx="8" stroke="%23334155" stroke-width="2"/><text x="40" y="55" fill="%2338bdf8" font-family="sans-serif" font-size="16" font-weight="bold">CSC 401 %C2%B7 Sprint Architecture %26 Burndown</text><rect x="40" y="90" width="140" height="90" rx="8" fill="%230f172a" stroke="%2338bdf8" stroke-width="2"/><text x="55" y="130" fill="%23f8fafc" font-family="sans-serif" font-size="13" font-weight="bold">Product Backlog</text><text x="55" y="155" fill="%2394a3b8" font-family="sans-serif" font-size="11">24 User Stories</text><line x1="180" y1="135" x2="230" y2="135" stroke="%2338bdf8" stroke-width="2"/><rect x="230" y="90" width="140" height="90" rx="8" fill="%230f172a" stroke="%23818cf8" stroke-width="2"/><text x="245" y="130" fill="%23f8fafc" font-family="sans-serif" font-size="13" font-weight="bold">Sprint Backlog</text><text x="245" y="155" fill="%2394a3b8" font-family="sans-serif" font-size="11">Milestone 1 Tasks</text><line x1="370" y1="135" x2="420" y2="135" stroke="%23818cf8" stroke-width="2"/><rect x="420" y="90" width="140" height="90" rx="8" fill="%230f172a" stroke="%2334d399" stroke-width="2"/><text x="445" y="130" fill="%23f8fafc" font-family="sans-serif" font-size="13" font-weight="bold">Shipped</text><text x="445" y="155" fill="%2334d399" font-family="sans-serif" font-size="11">CI/CD Pass</text><path d="M 50 300 Q 180 230, 300 270 T 540 210" fill="none" stroke="%23f59e0b" stroke-width="3"/><text x="40" y="340" fill="%23fbbf24" font-family="sans-serif" font-size="12">%E2%98%85 Burndown trajectory approved by Dr. Okafor</text></svg>`
-
-const aStarGraphSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" viewBox="0 0 600 380"><rect width="600" height="380" fill="%230f172a" rx="12"/><rect x="15" y="15" width="570" height="350" fill="%231e1b4b" rx="8" stroke="%234338ca" stroke-width="2"/><text x="40" y="55" fill="%23a5b4fc" font-family="sans-serif" font-size="16" font-weight="bold">CSC 403 %C2%B7 A* Search Graph (Slide 24)</text><circle cx="300" cy="110" r="26" fill="%234338ca" stroke="%23c7d2fe" stroke-width="2"/><text x="294" y="116" fill="%23fff" font-family="sans-serif" font-size="16" font-weight="bold">S</text><circle cx="180" cy="205" r="24" fill="%23312e81" stroke="%23818cf8" stroke-width="2"/><text x="174" y="211" fill="%23fff" font-family="sans-serif" font-size="15" font-weight="bold">A</text><circle cx="420" cy="205" r="24" fill="%23312e81" stroke="%23818cf8" stroke-width="2"/><text x="414" y="211" fill="%23fff" font-family="sans-serif" font-size="15" font-weight="bold">B</text><circle cx="300" cy="295" r="26" fill="%23065f46" stroke="%236ee7b7" stroke-width="2"/><text x="293" y="301" fill="%23fff" font-family="sans-serif" font-size="16" font-weight="bold">G</text><line x1="280" y1="125" x2="200" y2="185" stroke="%23818cf8" stroke-width="2"/><text x="215" y="150" fill="%23c7d2fe" font-family="sans-serif" font-size="11">c=3, h=5</text><line x1="320" y1="125" x2="400" y2="185" stroke="%23818cf8" stroke-width="2"/><text x="365" y="150" fill="%23c7d2fe" font-family="sans-serif" font-size="11">c=4, h=3</text><line x1="195" y1="225" x2="280" y2="280" stroke="%23818cf8" stroke-width="2"/><line x1="405" y1="225" x2="320" y2="280" stroke="%2334d399" stroke-width="3"/><text x="375" y="265" fill="%236ee7b7" font-family="sans-serif" font-size="12">Optimal f(n)=7</text><text x="40" y="345" fill="%2394a3b8" font-family="sans-serif" font-size="11">Formula: f(n) = g(n) + h(n) | Goal node G reached with minimum cost</text></svg>`
-
 export function ChatView({ direct = false }: { direct?: boolean }) {
-  // Pre-configured channels matching university courses
-  const [channels, setChannels] = useState<GroupChannel[]>([
-    {
-      id: 'grp-1',
-      name: 'CSC 401 · Software Engineering Class',
-      category: 'course',
-      codeTag: 'Auto-enrolled via CSC 401',
-      memberCount: 148,
-      description: 'Official class channel for Software Engineering. Lecture updates, sprint project coordination, and slide distributions.',
-      inviteCode: 'CSC401-MAIN',
-      members: [
-        { name: 'Daniel Chukwu', role: 'Course Representative', avatar: 'DC' },
-        { name: 'Dr. Adaeze Okafor', role: 'Senior Lecturer', avatar: 'AO' },
-        { name: 'Peter Chijioke (You)', role: 'Student · 400L', avatar: 'PE' },
-        { name: 'Amaka Nwosu', role: 'Student · 400L', avatar: 'AN' },
-        { name: 'David Obi', role: 'Student · 400L', avatar: 'DO' },
-      ],
-    },
-    {
-      id: 'grp-2',
-      name: 'CSC 403 · Artificial Intelligence Class',
-      category: 'course',
-      codeTag: 'Auto-enrolled via CSC 403',
-      memberCount: 148,
-      description: 'Heuristic search assignments, Jupyter notebook discussions, and AI past question review.',
-      inviteCode: 'CSC403-CLASS',
-      members: [
-        { name: 'Daniel Chukwu', role: 'Course Representative', avatar: 'DC' },
-        { name: 'Prof. Kingsley Bassey', role: 'Professor', avatar: 'KB' },
-        { name: 'Peter Chijioke (You)', role: 'Student · 400L', avatar: 'PE' },
-        { name: 'Mariam Yusuf', role: 'Student · 400L', avatar: 'MY' },
-      ],
-    },
-    {
-      id: 'grp-3',
-      name: '400 Level Computer Science (General)',
-      category: 'department',
-      codeTag: 'Department Cohort',
-      memberCount: 162,
-      description: 'General departmental notices, faculty events, clearance deadlines, and general student union directives.',
-      inviteCode: 'CS400-ALL',
-      members: [
-        { name: 'Daniel Chukwu', role: 'Department Rep', avatar: 'DC' },
-        { name: 'HOD Office / Staff', role: 'Faculty Admin', avatar: 'HO' },
-        { name: 'Peter Chijioke (You)', role: 'Student · 400L', avatar: 'PE' },
-      ],
-    },
-    {
-      id: 'grp-4',
-      name: 'Group 4 Sprint Project Team',
-      category: 'study_group',
-      codeTag: 'Project Cell · 6 Members',
-      memberCount: 6,
-      description: 'Team space for CSC 401 sprint backlog milestone 1 and GitHub repository work.',
-      inviteCode: 'CR-GRP4',
-      members: [
-        { name: 'Peter Chijioke (You)', role: 'Team Lead', avatar: 'PE' },
-        { name: 'Amaka Nwosu', role: 'Backend Dev', avatar: 'AN' },
-        { name: 'David Obi', role: 'Frontend Dev', avatar: 'DO' },
-        { name: 'Chinonso Eze', role: 'QA Tester', avatar: 'CE' },
-      ],
-    },
-  ])
-
-  // Direct message contacts
-  const [contacts, setContacts] = useState<DirectContact[]>([
-    {
-      id: 'dm-1',
-      name: 'Daniel Chukwu',
-      role: 'Course Representative (CSC 400L)',
-      department: 'Computer Science',
-      level: '400L',
-      online: true,
-      avatar: 'DC',
-      lastMessage: 'Sure Peter, I will announce the venue change before 10 AM.',
-      time: '12m ago',
-    },
-    {
-      id: 'dm-2',
-      name: 'Amaka Nwosu',
-      role: 'Study Partner · 400L',
-      department: 'Computer Science',
-      level: '400L',
-      online: true,
-      avatar: 'AN',
-      lastMessage: 'Have you checked the search algorithms slide 24?',
-      time: '2h ago',
-    },
-    {
-      id: 'dm-3',
-      name: 'Mariam Yusuf',
-      role: 'Classmate · 400L',
-      department: 'Computer Science',
-      level: '400L',
-      online: false,
-      avatar: 'MY',
-      lastMessage: 'Thanks for sharing the past questions PDF!',
-      time: 'Yesterday',
-    },
-    {
-      id: 'dm-4',
-      name: 'David Obi',
-      role: 'Marketplace Seller',
-      department: 'Computer Science',
-      level: '400L',
-      online: true,
-      avatar: 'DO',
-      lastMessage: 'Yes, the scientific calculator is still available at Hall 3.',
-      time: '2d ago',
-    },
-  ])
+  // Live channels & contacts from database
+  const [channels, setChannels] = useState<GroupChannel[]>([])
+  const [contacts, setContacts] = useState<DirectContact[]>([])
 
   // Active selections
-  const [activeGroupId, setActiveGroupId] = useState('grp-1')
-  const [activeContactId, setActiveContactId] = useState('dm-1')
+  const [activeGroupId, setActiveGroupId] = useState('')
+  const [activeContactId, setActiveContactId] = useState('')
 
   // Lightbox & image zoom state
   const [lightboxImage, setLightboxImage] = useState<{
@@ -206,128 +94,8 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
   } | null>(null)
   const [isZoomed, setIsZoomed] = useState(false)
 
-  // Messages per conversation state
-  const [conversationMessages, setConversationMessages] = useState<Record<string, MessageItem[]>>({
-    'grp-1': [
-      {
-        id: 'm-1',
-        sender: 'Daniel Chukwu',
-        avatar: 'DC',
-        role: 'rep',
-        text: 'Good morning everyone! Quick reminder: Dr. Okafor moved today\'s CSC 401 lecture from ICT Centre to Lecture Hall B.',
-        time: '9:30 AM',
-        isMine: false,
-      },
-      {
-        id: 'm-2',
-        sender: 'Amaka Nwosu',
-        avatar: 'AN',
-        role: 'student',
-        text: 'Thanks Daniel. Is the sprint backlog submission still due on Friday?',
-        time: '9:38 AM',
-        isMine: false,
-      },
-      {
-        id: 'm-3',
-        sender: 'Daniel Chukwu',
-        avatar: 'DC',
-        role: 'rep',
-        text: 'Yes, Friday 11:59 PM on the department portal. Group leaders should upload their GitHub link.',
-        time: '9:40 AM',
-        isMine: false,
-      },
-      {
-        id: 'm-4',
-        sender: 'Peter Chijioke (You)',
-        avatar: 'PE',
-        role: 'you',
-        text: 'Got it, Group 4 has already finalized our sprint burn-down PDF.',
-        time: '9:45 AM',
-        isMine: true,
-      },
-      {
-        id: 'm-5',
-        sender: 'Daniel Chukwu',
-        avatar: 'DC',
-        role: 'rep',
-        text: 'Here is the sprint architecture diagram shared on the board today for everyone\'s reference.',
-        time: '9:52 AM',
-        isMine: false,
-        attachment: {
-          name: 'CSC401_Sprint_Architecture.png',
-          url: sprintArchSvg,
-          type: 'image/png',
-          isImage: true,
-        },
-      },
-    ],
-    'grp-4': [
-      {
-        id: 'm-20',
-        sender: 'Peter Chijioke (You)',
-        avatar: 'PE',
-        role: 'you',
-        text: 'Hey team, let\'s sync on our sprint backlog milestone 1 before tomorrow.',
-        time: 'Yesterday',
-        isMine: true,
-      },
-      {
-        id: 'm-21',
-        sender: 'Amaka Nwosu',
-        avatar: 'AN',
-        role: 'student',
-        text: 'I pushed the user authentication API endpoints to our GitHub repo.',
-        time: 'Yesterday',
-        isMine: false,
-      },
-    ],
-    'dm-1': [
-      {
-        id: 'dm-m-1',
-        sender: 'Peter Chijioke (You)',
-        avatar: 'PE',
-        role: 'you',
-        text: 'Hello Daniel, please will the lecturer take attendance in Lecture Hall B today?',
-        time: '10:05 AM',
-        isMine: true,
-      },
-      {
-        id: 'dm-m-2',
-        sender: 'Daniel Chukwu',
-        avatar: 'DC',
-        role: 'rep',
-        text: 'Yes Peter, she mentioned passing around the 400L attendance sheet around 11:00 AM.',
-        time: '10:08 AM',
-        isMine: false,
-      },
-    ],
-    'dm-2': [
-      {
-        id: 'dm-m-3',
-        sender: 'Amaka Nwosu',
-        avatar: 'AN',
-        role: 'student',
-        text: 'Hi Peter, have you looked at the A* heuristic search question in the past questions?',
-        time: '8:15 AM',
-        isMine: false,
-      },
-      {
-        id: 'dm-m-4',
-        sender: 'Amaka Nwosu',
-        avatar: 'AN',
-        role: 'student',
-        text: 'Check this graph traversal diagram from slide 24. Shows why path through B is optimal.',
-        time: '8:20 AM',
-        isMine: false,
-        attachment: {
-          name: 'A_Star_Graph_Slide24.png',
-          url: aStarGraphSvg,
-          type: 'image/png',
-          isImage: true,
-        },
-      },
-    ],
-  })
+  // Messages per conversation state - dynamic from database
+  const [conversationMessages, setConversationMessages] = useState<Record<string, MessageItem[]>>({})
 
   // Composer state
   const [inputText, setInputText] = useState('')
@@ -354,14 +122,35 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
   }
 
   // Active object references
-  const currentGroup = channels.find((g) => g.id === activeGroupId) || channels[0]
-  const currentContact = contacts.find((c) => c.id === activeContactId) || contacts[0]
-  const currentKey = direct ? activeContactId : activeGroupId
+  const currentGroup = channels.find((g) => g.id === activeGroupId) || channels[0] || {
+    id: 'grp-0',
+    name: 'General Channel',
+    category: 'course' as const,
+    memberCount: 1,
+    description: 'Welcome to student group channels',
+    members: [],
+  }
+  const currentContact = contacts.find((c) => c.id === activeContactId) || contacts[0] || {
+    id: 'dm-0',
+    name: 'Classmate',
+    role: 'Student',
+    department: 'Computer Science',
+    level: '400L',
+    online: true,
+    avatar: 'ST',
+    lastMessage: '',
+    time: '',
+  }
+  const currentKey = direct ? (activeContactId || currentContact.id) : (activeGroupId || currentGroup.id)
   const currentMessages = conversationMessages[currentKey] || []
 
-  // Load current user & groups from backend
+  // Load current user, groups, and contacts from backend
   useEffect(() => {
     const initData = async () => {
+      // 1. Ensure valid JWT auth token
+      const token = await ensureAuthToken()
+
+      // 2. Load user profile
       try {
         const me = await api.auth.me()
         if (me) {
@@ -372,6 +161,7 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
         if (local) setCurrentUser({ id: 7, name: local.name })
       }
 
+      // 3. Load groups from PostgreSQL database
       try {
         const liveGroups = await api.chat.getGroups()
         if (Array.isArray(liveGroups) && liveGroups.length > 0) {
@@ -379,67 +169,142 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
             id: `grp-${g.id}`,
             name: g.name,
             category: 'course',
-            codeTag: 'Active Group Room',
-            memberCount: 24,
+            codeTag: `Channel #${g.id}`,
+            memberCount: 1,
             description: g.description || 'Class discussion room',
             inviteCode: `CR-${g.id}`,
             members: [
               { name: 'Daniel Chukwu', role: 'Course Representative', avatar: 'DC' },
-              { name: 'Peter Chijioke (You)', role: 'Student', avatar: 'PE' },
+              { name: 'Peter Chijioke (You)', role: 'Student', avatar: 'PC' },
             ],
           }))
-          setChannels((prev) => {
-            const existingIds = new Set(prev.map((p) => p.id))
-            const newChannels = mapped.filter((m) => !existingIds.has(m.id))
-            return [...prev, ...newChannels]
-          })
+          setChannels(mapped)
+          if (!activeGroupId && mapped[0]) {
+            setActiveGroupId(mapped[0].id)
+          }
         }
       } catch (err) {
         console.warn('Failed to load chat groups from API:', err)
       }
+
+      // 4. Default contacts list
+      const defaultContacts: DirectContact[] = [
+        {
+          id: 'dm-8',
+          name: 'Daniel Chukwu',
+          role: 'Course Representative (400L)',
+          department: 'Computer Science',
+          level: '400L',
+          online: true,
+          avatar: 'DC',
+          lastMessage: 'Tap to chat with your course representative',
+          time: 'Active now',
+        },
+      ]
+      setContacts(defaultContacts)
+      if (!activeContactId) {
+        setActiveContactId(defaultContacts[0].id)
+      }
+
+      // 5. Connect WebSocket with verified token
+      if (token) {
+        try {
+          if (wsRef.current) {
+            wsRef.current.close()
+          }
+          const url = getWebSocketUrl(token)
+          const ws = new WebSocket(url)
+          wsRef.current = ws
+
+          ws.onopen = () => {
+            setWsConnected(true)
+            if (!direct && activeGroupId) {
+              const gid = parseInt(activeGroupId.replace(/\D/g, '')) || 1
+              ws.send(JSON.stringify({ type: 'join_group', group_id: gid }))
+            }
+          }
+
+          ws.onclose = () => {
+            setWsConnected(false)
+          }
+
+          ws.onerror = () => {
+            setWsConnected(false)
+          }
+
+          ws.onmessage = (event) => {
+            try {
+              const res = JSON.parse(event.data)
+              if (res.type === 'message' && res.data) {
+                const m = res.data
+                const isMine = m.sender_id === currentUser.id
+                const incomingMsg: MessageItem = {
+                  id: `msg-${m.id || Date.now()}`,
+                  sender: isMine ? `${m.sender_name} (You)` : m.sender_name,
+                  avatar: (m.sender_name || 'CL').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase(),
+                  role: isMine ? 'you' : 'student',
+                  text: m.content,
+                  time: new Date(m.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  isMine,
+                  attachment: m.attachment_url
+                    ? {
+                        name: m.attachment_name || 'attachment',
+                        url: m.attachment_url,
+                        type: m.attachment_type || '',
+                        isImage: m.attachment_type?.startsWith('image/'),
+                      }
+                    : undefined,
+                }
+
+                const targetKey = m.group_id
+                  ? `grp-${m.group_id}`
+                  : `dm-${m.recipient_id === currentUser.id ? m.sender_id : m.recipient_id}`
+
+                setConversationMessages((prev) => ({
+                  ...prev,
+                  [targetKey]: [...(prev[targetKey] || []).filter((item) => item.id !== incomingMsg.id), incomingMsg],
+                }))
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+        } catch (e) {
+          console.warn('WebSocket init error:', e)
+        }
+      }
     }
 
     initData()
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
+    }
   }, [])
 
-  // Setup WebSocket connection
+  // Fetch group messages when active group changes
   useEffect(() => {
-    let ws: WebSocket | null = null
-    try {
-      const url = getWebSocketUrl()
-      ws = new WebSocket(url)
-      wsRef.current = ws
-
-      ws.onopen = () => {
-        setWsConnected(true)
-        if (!direct && activeGroupId) {
-          const gid = parseInt(activeGroupId.replace(/\D/g, '')) || 1
-          ws?.send(JSON.stringify({ type: 'join_group', group_id: gid }))
+    if (!direct && activeGroupId) {
+      const gid = parseInt(activeGroupId.replace(/\D/g, ''))
+      if (gid) {
+        // Join WebSocket room
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'join_group', group_id: gid }))
         }
-      }
 
-      ws.onclose = () => {
-        setWsConnected(false)
-      }
-
-      ws.onerror = () => {
-        setWsConnected(false)
-      }
-
-      ws.onmessage = (event) => {
-        try {
-          const res = JSON.parse(event.data)
-          if (res.type === 'message' && res.data) {
-            const m = res.data
-            const isMine = m.sender_id === currentUser.id
-            const incomingMsg: MessageItem = {
-              id: `msg-${m.id || Date.now()}`,
-              sender: isMine ? `${m.sender_name} (You)` : m.sender_name,
-              avatar: (m.sender_name || 'CL').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase(),
-              role: isMine ? 'you' : 'student',
+        // Fetch past messages from backend
+        api.chat.getGroupMessages(gid).then((msgs) => {
+          if (Array.isArray(msgs)) {
+            const mapped: MessageItem[] = msgs.map((m) => ({
+              id: String(m.id),
+              sender: m.sender_id === currentUser.id ? `${m.sender_name} (You)` : m.sender_name,
+              avatar: (m.sender_name || 'CL').split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase(),
+              role: m.sender_id === currentUser.id ? 'you' : 'student',
               text: m.content,
-              time: 'Just now',
-              isMine,
+              time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              isMine: m.sender_id === currentUser.id,
               attachment: m.attachment_url
                 ? {
                     name: m.attachment_name || 'attachment',
@@ -448,39 +313,44 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
                     isImage: m.attachment_type?.startsWith('image/'),
                   }
                 : undefined,
-            }
-
-            const targetKey = m.group_id
-              ? `grp-${m.group_id}`
-              : `dm-${m.recipient_id === currentUser.id ? m.sender_id : m.recipient_id}`
-
-            setConversationMessages((prev) => ({
-              ...prev,
-              [targetKey]: [...(prev[targetKey] || []).filter((item) => item.id !== incomingMsg.id), incomingMsg],
             }))
+            setConversationMessages((prev) => ({ ...prev, [activeGroupId]: mapped }))
           }
-        } catch (e) {
-          // ignore non-json messages
-        }
-      }
-    } catch (e) {
-      console.warn('WebSocket init exception:', e)
-    }
-
-    return () => {
-      if (ws) {
-        ws.close()
+        }).catch((e) => console.warn('Could not load group messages:', e))
       }
     }
-  }, [currentUser.id])
+  }, [activeGroupId, direct, currentUser.id])
 
-  // Join group channel room when group changes
+  // Fetch direct messages when active contact changes
   useEffect(() => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && !direct && activeGroupId) {
-      const gid = parseInt(activeGroupId.replace(/\D/g, '')) || 1
-      wsRef.current.send(JSON.stringify({ type: 'join_group', group_id: gid }))
+    if (direct && activeContactId) {
+      const recipientId = parseInt(activeContactId.replace(/\D/g, ''))
+      if (recipientId) {
+        api.chat.getDirectMessages(recipientId).then((msgs) => {
+          if (Array.isArray(msgs)) {
+            const mapped: MessageItem[] = msgs.map((m) => ({
+              id: String(m.id),
+              sender: m.sender_id === currentUser.id ? `${m.sender_name} (You)` : m.sender_name,
+              avatar: (m.sender_name || 'CL').split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase(),
+              role: m.sender_id === currentUser.id ? 'you' : 'student',
+              text: m.content,
+              time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              isMine: m.sender_id === currentUser.id,
+              attachment: m.attachment_url
+                ? {
+                    name: m.attachment_name || 'attachment',
+                    url: m.attachment_url,
+                    type: m.attachment_type || '',
+                    isImage: m.attachment_type?.startsWith('image/'),
+                  }
+                : undefined,
+            }))
+            setConversationMessages((prev) => ({ ...prev, [activeContactId]: mapped }))
+          }
+        }).catch((e) => console.warn('Could not load direct messages:', e))
+      }
     }
-  }, [activeGroupId, direct, wsConnected])
+  }, [activeContactId, direct, currentUser.id])
 
   useEffect(() => {
     if (messageListRef.current) {
@@ -916,10 +786,20 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
               </strong>
               <span>
                 {!direct
-                  ? `${currentGroup.description}`
-                  : 'End-to-end coordinated student messaging for coursework and campus academic exchange.'}
+                  ? currentGroup.description
+                  : 'Direct coordinated messaging for coursework and campus academic exchange.'}
               </span>
             </div>
+
+            {currentMessages.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b', fontSize: '13px' }}>
+                <MessageCircle style={{ width: '28px', height: '28px', margin: '0 auto 10px', opacity: 0.5, display: 'block' }} />
+                <strong>No messages yet</strong>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                  Send a message below to start the conversation!
+                </p>
+              </div>
+            )}
 
             {currentMessages.map((msg) => (
               <div
