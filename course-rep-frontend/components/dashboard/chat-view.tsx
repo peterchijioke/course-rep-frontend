@@ -33,7 +33,14 @@ import {
 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Pill } from '@/components/pill'
-import { api, getWebSocketUrl, getAuthToken, type ChatGroup, type ChatMessage } from '@/lib/api'
+import {
+  api,
+  getWebSocketUrl,
+  getAuthToken,
+  ensureAuthToken,
+  type ChatGroup,
+  type ChatMessage,
+} from '@/lib/api'
 import { getUserProfile } from '@/lib/user-profile'
 
 interface MessageItem {
