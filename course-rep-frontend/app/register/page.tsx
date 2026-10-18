@@ -154,7 +154,7 @@ export default function RegisterPage() {
         <div className="story-glow story-glow-one" />
         <div className="story-glow story-glow-two" />
         <div className="auth-story-brand">
-          <Logo href="/" />
+          <Logo href="/" variant="white" />
         </div>
         <div className="story-content">
           <span className="story-kicker">Your academic command centre</span>
