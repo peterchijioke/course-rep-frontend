@@ -120,10 +120,23 @@ export default function CoursesPage() {
     setLevels(getAcademicLevels())
     setSemesters(getAcademicSemesters())
 
-    const handleCoursesUpdate = () => setCourseList(getEnrolledCourses())
+    const handleCoursesUpdate = () => {
+      const enrolled = getEnrolledCourses()
+      setCourseList(enrolled)
+      if (enrolled.length > 0) {
+        setSelectedLevel((cur) => {
+          const hasInCurrent = enrolled.some((c) => (c.level || '400 Level') === cur)
+          return hasInCurrent ? cur : (enrolled[0].level || '400 Level')
+        })
+      }
+    }
     const handleLevelsUpdate = () => setLevels(getAcademicLevels())
     const handleSemestersUpdate = () => setSemesters(getAcademicSemesters())
-    const handleProfileUpdate = () => setUserProfile(getUserProfile())
+    const handleProfileUpdate = () => {
+      const p = getUserProfile()
+      setUserProfile(p)
+      if (p.level) setSelectedLevel(p.level)
+    }
 
     // 1. Fetch live catalog courses from backend database
     api.courses.getAll().then((data: any) => {
@@ -139,6 +152,10 @@ export default function CoursesPage() {
       if (Array.isArray(list) && list.length > 0) {
         setCourseList(list)
         saveEnrolledCourses(list)
+        setSelectedLevel((cur) => {
+          const hasInCurrent = list.some((c: any) => (c.level || '400 Level') === cur)
+          return hasInCurrent ? cur : (list[0].level || '400 Level')
+        })
       }
     }).catch(() => {})
 
@@ -1550,6 +1567,46 @@ export default function CoursesPage() {
               <p style={{ color: 'var(--muted-foreground)', fontSize: '13px', margin: '0 auto 20px', maxWidth: '520px', lineHeight: 1.5 }}>
                 Under the Nigerian University (NUC) system, course registration is organized strictly by Level and Semester. You haven&apos;t enrolled any courses in this semester yet.
               </p>
+
+              {courseList.length > 0 && (
+                <div
+                  style={{
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px solid rgba(99, 102, 241, 0.25)',
+                    borderRadius: '12px',
+                    padding: '14px 20px',
+                    margin: '0 auto 20px',
+                    maxWidth: '520px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    flexWrap: 'wrap',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '13px', color: 'var(--foreground)' }}>
+                      You have {courseList.length} course{courseList.length > 1 ? 's' : ''} enrolled in {courseList[0]?.level || '400 Level'}
+                    </strong>
+                    <span style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>
+                      Switch your active view to see your registered courses and lecture timetable.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => {
+                      setSelectedLevel(courseList[0]?.level || '400 Level')
+                      setSelectedSemester('First Semester')
+                    }}
+                    style={{ fontSize: '12px', padding: '7px 14px', whiteSpace: 'nowrap' }}
+                  >
+                    Switch to {courseList[0]?.level || '400 Level'} &rarr;
+                  </button>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <button
                   type="button"

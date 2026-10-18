@@ -19,6 +19,17 @@ import { Pill } from '@/components/pill'
 import { getAcademicHistory, type AcademicHistory, getDegreeClassification } from '@/lib/academic-records'
 import { getUserProfile, type UserProfile, defaultUserProfile } from '@/lib/user-profile'
 import { api } from '@/lib/api'
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from 'recharts'
 
 export default function InsightsPage() {
   const [history, setHistory] = useState<AcademicHistory>(() => getAcademicHistory())
@@ -54,6 +65,8 @@ export default function InsightsPage() {
           setHistory((prev) => ({
             ...prev,
             cgpa: rec.cgpa,
+            overallCGPA: rec.cgpa,
+            degreeClass: getDegreeClassification(rec.cgpa),
             totalUnitsEarned: rec.completed_credits,
             totalUnitsRequired: rec.total_credits,
             overallPoints: Number((rec.cgpa * rec.completed_credits).toFixed(2)),
@@ -79,10 +92,10 @@ export default function InsightsPage() {
 
   // Calculate remaining units and required GPA
   const targetAnalysis = useMemo(() => {
-    const totalReq = history.totalUnitsRequired || 152
-    const totalEarned = history.totalUnitsEarned || 118
+    const totalReq = history.totalUnitsRequired || 120
+    const totalEarned = history.totalUnitsEarned || 72
     const remainingUnits = Math.max(0, totalReq - totalEarned)
-    const currentPoints = history.overallPoints || 516.84
+    const currentPoints = history.overallPoints || Number(((history.cgpa || 3.68) * totalEarned).toFixed(2))
 
     const targetPoints = targetCGPA * totalReq
     const neededPoints = targetPoints - currentPoints
@@ -114,10 +127,11 @@ export default function InsightsPage() {
     })
 
     if (totalCourses === 0) {
-      counts.A = 18
-      counts.B = 8
-      counts.C = 3
-      totalCourses = 29
+      // Calibrated to live CGPA 3.68 across 72 earned credits (~24 courses)
+      counts.A = 8
+      counts.B = 12
+      counts.C = 4
+      totalCourses = 24
     }
 
     return {
@@ -134,25 +148,25 @@ export default function InsightsPage() {
     if (history.semesters.length > 0) {
       return history.semesters.map((sem) => ({
         label: `${sem.level.replace(' Level', 'L')} ${sem.semester === 'First Semester' ? 'S1' : 'S2'}`,
-        gpa: sem.gpa || 4.2,
-        cgpa: sem.cgpa || 4.38,
-        units: sem.totalUnits || 18,
+        gpa: Number((sem.gpa || 3.6).toFixed(2)),
+        cgpa: Number((sem.cgpa || history.cgpa || 3.68).toFixed(2)),
+        units: sem.totalUnits || 12,
       }))
     }
+    const currentCGPA = history.cgpa || 3.68
     return [
-      { label: '100L S1', gpa: 4.20, cgpa: 4.20, units: 19 },
-      { label: '100L S2', gpa: 4.35, cgpa: 4.28, units: 18 },
-      { label: '200L S1', gpa: 4.15, cgpa: 4.23, units: 20 },
-      { label: '200L S2', gpa: 4.45, cgpa: 4.29, units: 19 },
-      { label: '300L S1', gpa: 4.50, cgpa: 4.34, units: 21 },
-      { label: '300L S2', gpa: 4.60, cgpa: 4.38, units: 21 },
-      { label: '400L S1', gpa: 4.38, cgpa: 4.38, units: 18 },
+      { label: '100L S1', gpa: 3.50, cgpa: 3.50, units: 12 },
+      { label: '100L S2', gpa: 3.65, cgpa: 3.58, units: 12 },
+      { label: '200L S1', gpa: 3.60, cgpa: 3.58, units: 12 },
+      { label: '200L S2', gpa: 3.75, cgpa: 3.63, units: 12 },
+      { label: '300L S1', gpa: 3.70, cgpa: 3.64, units: 12 },
+      { label: '300L S2', gpa: 3.88, cgpa: currentCGPA, units: 12 },
     ]
   }, [history])
 
   const unitsCompletedPct = Math.min(
     100,
-    Math.round(((history.totalUnitsEarned || 118) / (history.totalUnitsRequired || 152)) * 100)
+    Math.round(((history.totalUnitsEarned || 72) / (history.totalUnitsRequired || 120)) * 100)
   )
 
   return (
@@ -182,11 +196,11 @@ export default function InsightsPage() {
           <div>
             <span>Current CGPA</span>
             <strong>
-              {history.overallCGPA.toFixed(2)}{' '}
+              {(history.overallCGPA || history.cgpa || 3.68).toFixed(2)}{' '}
               <small style={{ fontSize: '12px', color: '#64748b' }}>/ 5.00</small>
             </strong>
-            <small style={{ color: history.degreeClass.color, fontWeight: 700 }}>
-              {history.degreeClass.title}
+            <small style={{ color: (history.degreeClass || getDegreeClassification(history.cgpa || 3.68)).color, fontWeight: 700 }}>
+              {(history.degreeClass || getDegreeClassification(history.cgpa || 3.68)).title}
             </small>
           </div>
         </div>
@@ -198,8 +212,8 @@ export default function InsightsPage() {
           <div>
             <span>Graduation Progress</span>
             <strong>
-              {history.totalUnitsEarned || 118}{' '}
-              <small style={{ fontSize: '12px', color: '#64748b' }}>/ {history.totalUnitsRequired || 152} Units</small>
+              {history.totalUnitsEarned || 72}{' '}
+              <small style={{ fontSize: '12px', color: '#64748b' }}>/ {history.totalUnitsRequired || 120} Units</small>
             </strong>
             <small style={{ color: '#2563eb', fontWeight: 600 }}>
               {unitsCompletedPct}% completed &bull; {targetAnalysis.remainingUnits} units left
@@ -213,9 +227,9 @@ export default function InsightsPage() {
           </div>
           <div>
             <span>Class Standing</span>
-            <strong>Top 10%</strong>
+            <strong>Top 15%</strong>
             <small style={{ color: '#059669', fontWeight: 600 }}>
-              +0.96 above department avg (3.42)
+              +{Math.max(0, (history.overallCGPA || history.cgpa || 3.68) - 3.42).toFixed(2)} above dept avg (3.42)
             </small>
           </div>
         </div>
@@ -243,41 +257,121 @@ export default function InsightsPage() {
           <div>
             <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <TrendingUp style={{ color: '#6366f1', width: '20px' }} />
-              Semester GPA Performance Trend
+              Academic GPA & CGPA Performance Trend
             </h2>
-            <p>Visual progression of semester GPAs from your first year to current session.</p>
+            <p>Interactive progression of semester GPAs and cumulative CGPA across your university journey.</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '11px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#6366f1', display: 'inline-block' }} />
-              Completed Semester
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#6366f1', display: 'inline-block' }} />
+              Semester GPA
             </span>
-            <span style={{ fontSize: '11px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '10px' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#10b981', display: 'inline-block' }} />
-              Current Semester
+            <span style={{ fontSize: '12px', color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+              Cumulative CGPA
             </span>
           </div>
         </div>
 
-        <div style={{ padding: '24px 24px 16px' }}>
-          <div className="chart-bars-container">
-            {semesterChartData.map((item, idx) => {
-              const heightPct = Math.min(100, Math.max(15, (item.gpa / 5.0) * 100))
-              const isCurrent = idx === semesterChartData.length - 1
-
-              return (
-                <div key={item.label} className="chart-bar-group">
-                  <span className="chart-bar-val">{item.gpa.toFixed(2)}</span>
-                  <div
-                    className={`chart-bar-fill ${isCurrent ? 'active' : ''}`}
-                    style={{ height: `${heightPct}%` }}
-                    title={`${item.label}: ${item.gpa.toFixed(2)} GPA (${item.units} Credit Units)`}
+        <div style={{ padding: '24px 20px 16px' }}>
+          {mounted ? (
+            <div style={{ width: '100%', height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={semesterChartData}
+                  margin={{ top: 12, right: 18, left: -14, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="gpaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.32} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
+                    </linearGradient>
+                    <linearGradient id="cgpaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.22} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.18)" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    stroke="#94a3b8"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={{ stroke: 'rgba(148, 163, 184, 0.2)' }}
                   />
-                  <span className="chart-bar-label">{item.label}</span>
-                </div>
-              )
-            })}
-          </div>
+                  <YAxis
+                    domain={[0, 5]}
+                    ticks={[1, 2, 3, 4, 5]}
+                    stroke="#94a3b8"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={{ stroke: 'rgba(148, 163, 184, 0.2)' }}
+                    tickFormatter={(v) => `${v}.0`}
+                  />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload || !payload.length) return null
+                      const item = payload[0]?.payload
+                      return (
+                        <div
+                          style={{
+                            background: 'rgba(15, 23, 42, 0.94)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            borderRadius: '10px',
+                            padding: '10px 14px',
+                            color: '#fff',
+                            fontSize: '12px',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                          }}
+                        >
+                          <div style={{ fontWeight: 700, marginBottom: '6px', color: '#f1f5f9' }}>
+                            {label} &bull; {item?.units || 12} Credit Units
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6366f1' }} />
+                            <span>Semester GPA:</span>
+                            <strong style={{ color: '#a5b4fc' }}>{item?.gpa?.toFixed(2)}</strong>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                            <span>Cumulative CGPA:</span>
+                            <strong style={{ color: '#6ee7b7' }}>{item?.cgpa?.toFixed(2)}</strong>
+                          </div>
+                        </div>
+                      )
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="gpa"
+                    name="Semester GPA"
+                    stroke="#6366f1"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#gpaGradient)"
+                    dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 6, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="cgpa"
+                    name="Cumulative CGPA"
+                    stroke="#10b981"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#cgpaGradient)"
+                    dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 6, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div style={{ height: 280, display: 'grid', placeItems: 'center', color: '#94a3b8' }}>
+              Loading performance trends...
+            </div>
+          )}
         </div>
       </Panel>
 
