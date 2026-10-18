@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import {
-  ArrowUp,
+  ArrowUpRight,
   CalendarDays,
   Check,
   ChevronRight,
@@ -35,7 +35,7 @@ export default function HomePage() {
               Start your semester <ChevronRight />
             </Link>
             <Link href="/login" className="landing-secondary">
-              Explore the workspace <ArrowUp />
+              Explore the workspace <ArrowUpRight />
             </Link>
           </div>
           <div className="landing-trust">

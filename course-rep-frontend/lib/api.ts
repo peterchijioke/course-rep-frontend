@@ -1,8 +1,8 @@
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://course-rep-backend.onrender.com/api/v1'
-
 export const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || 'https://course-rep-backend.onrender.com'
+
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || `${BACKEND_URL}/api/v1`
 
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null
