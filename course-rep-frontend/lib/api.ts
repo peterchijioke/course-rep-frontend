@@ -25,29 +25,7 @@ export function clearAuthToken() {
 }
 
 export async function ensureAuthToken(): Promise<string> {
-  let token = getAuthToken()
-  if (token) return token
-
-  if (typeof window !== 'undefined') {
-    try {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: 'peter.chijioke@example.edu.ng',
-          password: 'password123',
-        }),
-      })
-      const data = await res.json()
-      if (data.success && data.data?.token) {
-        token = data.data.token
-        setAuthToken(token!)
-        return token!
-      }
-    } catch (err) {
-      console.warn('Auto-login failed:', err)
-    }
-  }
+  const token = getAuthToken()
   return token || ''
 }
 
