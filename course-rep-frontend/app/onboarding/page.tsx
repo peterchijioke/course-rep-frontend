@@ -128,7 +128,7 @@ export default function OnboardingPage() {
           <span className="story-kicker">Academic Profile Setup</span>
           <h2>Set up your semester with confidence.</h2>
           <p>
-            Course Rep connects your personal academic command centre to your department cohort,
+            Gradia connects your personal academic command centre to your department cohort,
             lecture schedules, class rep alerts, and NUC transcript benchmarks.
           </p>
 
@@ -153,7 +153,7 @@ export default function OnboardingPage() {
               Capturing your institution, faculty, and matric number connects your personal academic
               command centre to your lecture reps seamlessly.
             </p>
-            <small>— Course Rep System Architecture</small>
+            <small>— Gradia System Architecture</small>
           </div>
         </div>
       </aside>

@@ -324,7 +324,7 @@ export default function MarketplacePage() {
                   e.stopPropagation()
                   setContactItem(item)
                   setContactMessage(
-                    `Hi ${item.seller}, I saw your listing "${item.title}" on Course Rep and I'm interested in getting it.`
+                    `Hi ${item.seller}, I saw your listing "${item.title}" on Gradia and I'm interested in getting it.`
                   )
                 }}
               >
@@ -458,7 +458,7 @@ export default function MarketplacePage() {
                 onClick={() => {
                   setContactItem(selectedItem)
                   setContactMessage(
-                    `Hi ${selectedItem.seller}, I saw your listing "${selectedItem.title}" on Course Rep and I'm interested in getting it.`
+                    `Hi ${selectedItem.seller}, I saw your listing "${selectedItem.title}" on Gradia and I'm interested in getting it.`
                   )
                   setSelectedItem(null)
                 }}

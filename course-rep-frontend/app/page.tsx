@@ -27,7 +27,7 @@ export default function HomePage() {
             Your academic life, <em>finally in one place.</em>
           </h1>
           <p>
-            Course Rep brings courses, announcements, timetables, conversations, and academic
+            Gradia brings courses, announcements, timetables, conversations, and academic
             insights together so students can focus on making progress.
           </p>
           <div className="landing-cta">
@@ -54,14 +54,14 @@ export default function HomePage() {
               <span />
               <span />
               <span />
-              <small>Course Rep workspace</small>
+              <small>Gradia workspace</small>
             </div>
             <div className="preview-body">
               <aside>
                 <div className="preview-brand">
                   <img src="/logo-icon.png" alt="" className="preview-logo-default" />
                   <img src="/logo-white.png" alt="" className="preview-logo-white" />
-                  <strong>Course Rep</strong>
+                  <strong>Gradia</strong>
                 </div>
                 <span className="preview-active">Overview</span>
                 <span>My courses</span>

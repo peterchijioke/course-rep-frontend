@@ -15,12 +15,12 @@ export function Logo({
     <Link
       href={href}
       className={`brand ${isWhite ? 'brand--white' : ''} ${className}`.trim()}
-      aria-label="Course Rep home"
+      aria-label="Gradia home"
     >
       <span className="brand-mark">
         <Image
           src="/logo-icon.png"
-          alt="Course Rep"
+          alt="Gradia"
           width={32}
           height={32}
           priority
@@ -28,14 +28,14 @@ export function Logo({
         />
         <Image
           src="/logo-white.png"
-          alt="Course Rep"
+          alt="Gradia"
           width={32}
           height={32}
           priority
           className="brand-logo-img brand-logo-white"
         />
       </span>
-      <span>Course Rep</span>
+      <span>Gradia</span>
     </Link>
   )
 }

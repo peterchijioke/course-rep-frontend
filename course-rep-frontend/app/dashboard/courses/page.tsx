@@ -365,8 +365,8 @@ export default function CoursesPage() {
       triggerToast(`You are already enrolled in ${catalogItem.code}`, 'info')
       return
     }
-    if (catalogItem.id) {
-      api.courses.join(catalogItem.id).catch((err) => console.warn('Backend enroll error:', err))
+    if (catalogItem.code) {
+      api.courses.join(catalogItem.code).catch((err) => console.warn('Backend enroll error:', err))
     }
     const enrolledItem: Course = {
       ...catalogItem,
@@ -380,7 +380,7 @@ export default function CoursesPage() {
     triggerToast(`Enrolled in ${catalogItem.code} for ${selectedLevel} (${enrolledItem.semester})!`, 'success')
   }
 
-  const handleCustomJoin = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCustomJoin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
     const code = String(form.get('code') || '').trim().toUpperCase()
@@ -453,6 +453,22 @@ export default function CoursesPage() {
       announcements: [],
       studyGroups: [],
     }
+
+    // Persist to backend database with student relationship mapping
+    api.courses.create({
+      code,
+      name,
+      units,
+      semester: formSemester,
+      level: formLevel,
+      department,
+      lecturer_name: lecturerName,
+      lecture_venue: venue,
+      next_lecture: `${day.slice(0, 3)}, ${time.split('–')[0].trim()}`,
+      color: newCourse.color,
+    }).catch((err) => {
+      console.warn('Backend course creation error:', err)
+    })
 
     const updatedList = [...courseList, newCourse]
     setCourseList(updatedList)

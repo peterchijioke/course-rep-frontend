@@ -21,10 +21,10 @@ export default function FeaturesPage() {
         </Pill>
         <h1>One workspace for your whole semester.</h1>
         <p>
-          Course Rep keeps the details that matter close at hand, from course updates to conversations with your classmates.
+          Gradia keeps the details that matter close at hand, from course updates to conversations with your classmates.
         </p>
         <Link href="/register" className="primary-button landing-primary">
-          Start with Course Rep <ChevronRight />
+          Start with Gradia <ChevronRight />
         </Link>
       </section>
 

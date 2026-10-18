@@ -194,7 +194,7 @@ export default function DashboardLayout({
           </span>
           <div>
             <strong>{userProfile.name}</strong>
-            <small>{userProfile.role === 'rep' ? 'Course Rep' : 'Student'} · {userProfile.level}</small>
+            <small>{userProfile.role === 'rep' ? 'Class Rep' : 'Student'} · {userProfile.level}</small>
           </div>
           <ChevronRight />
         </Link>
@@ -227,7 +227,7 @@ export default function DashboardLayout({
             </div>
             <ChevronRight />
           </Link>
-          <span className="version">Course Rep v1.0 · {userProfile.institution || 'Campus Hub'}</span>
+          <span className="version">Gradia v1.0 · {userProfile.institution || 'Campus Hub'}</span>
         </div>
       </aside>
 

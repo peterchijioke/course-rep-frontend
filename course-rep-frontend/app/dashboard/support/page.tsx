@@ -18,7 +18,7 @@ export default function SupportCenterPage() {
           <p className="eyebrow">Need a hand?</p>
           <h2>Let&apos;s get things sorted.</h2>
           <p>
-            Reach out to the Course Rep support team for help with your account,
+            Reach out to the Gradia support team for help with your account,
             courses, messages, or anything else in your workspace.
           </p>
         </div>

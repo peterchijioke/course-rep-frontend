@@ -4,8 +4,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Course Rep | Your academic life, organized',
-  description: 'Stay informed, track deadlines, and keep your university courses organized with Course Rep.',
+  title: 'Gradia | Your Academic Command Centre',
+  description: 'Manage enrolled courses, lecture timetables, syllabus completion, and honours CGPA forecasting with Gradia.',
   generator: 'v0.app',
   icons: {
     icon: [

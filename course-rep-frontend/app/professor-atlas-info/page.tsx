@@ -24,7 +24,7 @@ export default function ProfessorAtlasInfoPage() {
           Prof. Zikora helps you understand the record you have uploaded, spot patterns, and plan your next move with more confidence.
         </p>
         <Link href="/register" className="primary-button landing-primary">
-          Start with Course Rep <ChevronRight />
+          Start with Gradia <ChevronRight />
         </Link>
       </section>
 

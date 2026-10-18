@@ -70,6 +70,8 @@ export interface Course {
 export interface CreateCourseDTO {
   code: string
   name: string
+  units?: number
+  semester?: string
   color?: string
   department?: string
   level?: string
@@ -233,10 +235,10 @@ export const api = {
   courses: {
     getAll: () => apiRequest<Course[]>('/courses'),
     getMyEnrolled: () => apiRequest<Course[]>('/courses/my/enrolled'),
-    join: (courseId: number) =>
-      apiRequest<void>('/courses/join', {
+    join: (code: string) =>
+      apiRequest<any>('/courses/join', {
         method: 'POST',
-        body: JSON.stringify({ course_id: courseId }),
+        body: JSON.stringify({ code }),
       }),
     create: (dto: CreateCourseDTO) =>
       apiRequest<Course>('/courses', {

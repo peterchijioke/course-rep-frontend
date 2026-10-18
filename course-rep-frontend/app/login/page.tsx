@@ -112,7 +112,7 @@ function LoginForm() {
           </form>
 
           <p className="auth-switch">
-            New to Course Rep?{' '}
+            New to Gradia?{' '}
             <Link href="/register">Create an account</Link>
           </p>
         </div>
@@ -128,7 +128,7 @@ function LoginForm() {
           <span className="story-kicker">Your academic command centre</span>
           <h2>Stay ahead of every lecture, deadline, and update.</h2>
           <p>
-            Course Rep brings your academic life into one calm, focused workspace built for
+            Gradia brings your academic life into one calm, focused workspace built for
             students who want to move with clarity.
           </p>
           <div className="story-stat-row">

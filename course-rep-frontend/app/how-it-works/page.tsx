@@ -20,9 +20,9 @@ export default function HowItWorksPage() {
           <Sparkles /> Simple by design
         </Pill>
         <h1>A calmer way to move through campus life.</h1>
-        <p>Course Rep turns a busy semester into a few clear, repeatable steps.</p>
+        <p>Gradia turns a busy semester into a few clear, repeatable steps.</p>
         <Link href="/register" className="primary-button landing-primary">
-          Start with Course Rep <ChevronRight />
+          Start with Gradia <ChevronRight />
         </Link>
       </section>
 

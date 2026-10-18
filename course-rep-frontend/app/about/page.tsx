@@ -11,11 +11,11 @@ export default function AboutPage() {
 
       <section className="about-hero">
         <Pill tone="landing-pill">
-          <GraduationCap /> About Course Rep
+          <GraduationCap /> About Gradia
         </Pill>
         <h1>A better way to experience university.</h1>
         <p>
-          Course Rep was created to make academic life feel less scattered, more connected,
+          Gradia was created to make academic life feel less scattered, more connected,
           and easier to navigate.
         </p>
       </section>
@@ -28,12 +28,12 @@ export default function AboutPage() {
         <div>
           <p>
             Important updates live in one place, class conversations in another, and academic
-            records are often difficult to understand. Course Rep brings those pieces together in
+            records are often difficult to understand. Gradia brings those pieces together in
             one calm workspace.
           </p>
           <p>
             Whether you are checking your next lecture, joining a study group, or planning your next
-            academic move, Course Rep helps you stay informed and in control.
+            academic move, Gradia helps you stay informed and in control.
           </p>
         </div>
       </section>
@@ -60,7 +60,7 @@ export default function AboutPage() {
         <p className="eyebrow">Your semester starts here</p>
         <h2>Make academic life feel more manageable.</h2>
         <Link href="/register" className="primary-button landing-primary">
-          Get started with Course Rep <ChevronRight />
+          Get started with Gradia <ChevronRight />
         </Link>
       </section>
 
