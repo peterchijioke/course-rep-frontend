@@ -32,6 +32,8 @@ import { getEnrolledCourses, type Course } from '@/lib/data'
 import { defaultUserProfile, getUserProfile, type UserProfile } from '@/lib/user-profile'
 import { getAcademicHistory, recalculateAcademicHistory, type AcademicHistory, GRADE_POINT_MAP } from '@/lib/academic-records'
 import { api, getAtlasWebSocketUrl } from '@/lib/api'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface AuditCourseItem {
   code: string
@@ -92,21 +94,32 @@ const DEFAULT_SUGGESTIONS = [
 ]
 
 function FormattedMessage({ text }: { text: string }) {
-  const formattedHtml = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n\n/g, '<br /><br />')
-    .replace(/\n/g, '<br />')
-    .replace(/\*\s*\*\*([^*]+)\*\*/g, '<br />• <strong>$1</strong>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+  // Normalize bullet items that might be inline like "* **CSC 401:**" on a single line
+  const normalizedText = text.replace(/([^\n])\s*\*\s*\*\*/g, '$1\n\n* **')
 
   return (
-    <div
-      style={{ lineHeight: 1.6, fontSize: '13.5px' }}
-      dangerouslySetInnerHTML={{ __html: formattedHtml }}
-    />
+    <div className="prose-markdown">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          table: ({ node, ...props }) => (
+            <div className="markdown-table-wrapper">
+              <table className="markdown-table" {...props} />
+            </div>
+          ),
+          th: ({ node, ...props }) => <th className="markdown-th" {...props} />,
+          td: ({ node, ...props }) => <td className="markdown-td" {...props} />,
+          ul: ({ node, ...props }) => <ul className="markdown-ul" {...props} />,
+          ol: ({ node, ...props }) => <ol className="markdown-ol" {...props} />,
+          li: ({ node, ...props }) => <li className="markdown-li" {...props} />,
+          p: ({ node, ...props }) => <p className="markdown-p" {...props} />,
+          strong: ({ node, ...props }) => <strong className="markdown-strong" {...props} />,
+          code: ({ node, ...props }) => <code className="markdown-code" {...props} />,
+        }}
+      >
+        {normalizedText}
+      </ReactMarkdown>
+    </div>
   )
 }
 
