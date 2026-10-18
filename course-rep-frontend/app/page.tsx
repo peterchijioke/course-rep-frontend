@@ -58,7 +58,11 @@ export default function HomePage() {
             </div>
             <div className="preview-body">
               <aside>
-                <strong>Course Rep</strong>
+                <div className="preview-brand">
+                  <img src="/logo-icon.png" alt="" className="preview-logo-default" />
+                  <img src="/logo-white.png" alt="" className="preview-logo-white" />
+                  <strong>Course Rep</strong>
+                </div>
                 <span className="preview-active">Overview</span>
                 <span>My courses</span>
                 <span>Calendar</span>
