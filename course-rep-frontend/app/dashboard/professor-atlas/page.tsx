@@ -91,6 +91,25 @@ const DEFAULT_SUGGESTIONS = [
   },
 ]
 
+function FormattedMessage({ text }: { text: string }) {
+  const formattedHtml = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n\n/g, '<br /><br />')
+    .replace(/\n/g, '<br />')
+    .replace(/\*\s*\*\*([^*]+)\*\*/g, '<br />• <strong>$1</strong>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+
+  return (
+    <div
+      style={{ lineHeight: 1.6, fontSize: '13.5px' }}
+      dangerouslySetInnerHTML={{ __html: formattedHtml }}
+    />
+  )
+}
+
 export default function ProfessorAtlasPage() {
   const [mounted, setMounted] = useState(false)
   const [profile, setProfile] = useState<UserProfile>(defaultUserProfile)
@@ -759,7 +778,7 @@ export default function ProfessorAtlasPage() {
                     </div>
                   </div>
 
-                  <p style={{ lineHeight: 1.55 }}>{msg.text}</p>
+                  <FormattedMessage text={msg.text} />
 
                   {/* INITIAL AUDIT PRESENTATION */}
                   {msg.isInitialAudit && msg.auditData && (

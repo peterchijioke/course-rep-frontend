@@ -12,7 +12,7 @@ export function PageHeader({
   return (
     <div className="page-heading">
       <div>
-        <p className="eyebrow">Course Rep workspace</p>
+        <p className="eyebrow">Gradia workspace</p>
         <h1>{title}</h1>
         <p className="subheading">{subtitle}</p>
       </div>
