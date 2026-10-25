@@ -21,6 +21,7 @@ import {
   Sparkles,
   Store,
   Tag,
+  Trash2,
   X,
 } from 'lucide-react'
 import { LandingHeader } from '@/components/marketing/header'
@@ -156,6 +157,20 @@ export default function PublicMarketplacePage() {
   const openItemDetails = (item: MarketItem) => {
     setSelectedItem(item)
     setActivePhotoIndex(0)
+  }
+
+  const handleDeleteListing = async (item: MarketItem) => {
+    if (!confirm(`Are you sure you want to delete your listing "${item.title}"?`)) return
+    try {
+      if (item.id && !item.id.startsWith('mkt-')) {
+        await api.marketplace.delete(Number(item.id))
+      }
+    } catch (err) {
+      console.warn('Could not delete marketplace item on server:', err)
+    }
+    setItems((prev) => prev.filter((i) => i.id !== item.id))
+    setSelectedItem(null)
+    showToastMsg(`Listing "${item.title}" deleted.`)
   }
 
   // Handle buyer sending message -> routes to Direct Messages
@@ -618,14 +633,22 @@ export default function PublicMarketplacePage() {
               {/* Sticky Sheet Footer Actions */}
               <div className="market-sheet-footer">
                 {isOwner ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>This is your listing</span>
+                  <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      style={{ flex: 1, justifyContent: 'center', color: '#ef4444', borderColor: '#fca5a5' }}
+                      onClick={() => handleDeleteListing(selectedItem)}
+                    >
+                      <Trash2 style={{ width: 14, height: 14 }} />
+                      Delete Listing
+                    </button>
                     <Link
                       href="/dashboard/marketplace"
                       className="primary-button"
-                      style={{ padding: '9px 16px', fontSize: '12px' }}
+                      style={{ flex: 1, justifyContent: 'center', padding: '9px 16px', fontSize: '12px' }}
                     >
-                      Manage in Dashboard <ExternalLink style={{ width: 13, height: 13 }} />
+                      Dashboard <ExternalLink style={{ width: 13, height: 13 }} />
                     </Link>
                   </div>
                 ) : isAuthenticated ? (
