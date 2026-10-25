@@ -87,9 +87,17 @@ function LoginForm() {
               />
             </label>
 
-            <label>
-              Password
-              <div className="password-input">
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 650, color: 'var(--foreground, #334155)' }}>Password</span>
+                <Link
+                  href="/forgot-password"
+                  style={{ fontSize: '11.5px', color: '#4338ca', fontWeight: 600, textDecoration: 'none' }}
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="password-input" style={{ marginTop: 0 }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
@@ -104,7 +112,7 @@ function LoginForm() {
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
-            </label>
+            </div>
 
             <button type="submit" className="primary-button auth-submit" disabled={loading}>
               {loading ? 'Logging in...' : 'Log in'} <ChevronRight />

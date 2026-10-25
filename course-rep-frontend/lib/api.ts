@@ -279,6 +279,16 @@ export const api = {
         body: formData,
       })
     },
+    forgotPassword: (email: string) =>
+      apiRequest<{ message: string; code?: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (payload: { email: string; code: string; new_password: string }) =>
+      apiRequest<{ token: string; user: User }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   },
   courses: {
     getAll: () => apiRequest<Course[]>('/courses'),
