@@ -607,6 +607,7 @@ export const initialCalendarEvents: CalendarEvent[] = [
 
 export interface MarketItem {
   id?: string
+  seller_id?: number
   title: string
   seller: string
   price: string

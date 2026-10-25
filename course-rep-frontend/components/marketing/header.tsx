@@ -63,21 +63,19 @@ export function LandingHeader() {
         <Link href="/features">Features</Link>
         <Link href="/how-it-works">How it works</Link>
         <Link href="/professor-atlas-info">Prof. Zikora</Link>
-        {mounted && isAuthenticated && (
-          <Link
-            href="/dashboard/marketplace"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              color: '#4338ca',
-              fontWeight: 650,
-            }}
-          >
-            <Store style={{ width: '14px', height: '14px' }} />
-            <span>Marketplace</span>
-          </Link>
-        )}
+        <Link
+          href="/marketplace"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            color: '#4338ca',
+            fontWeight: 650,
+          }}
+        >
+          <Store style={{ width: '14px', height: '14px' }} />
+          <span>Marketplace</span>
+        </Link>
       </div>
 
       <div className="landing-actions">

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   AlertCircle,
   BookOpen,
@@ -30,13 +31,16 @@ import { Pill } from '@/components/pill'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type MarketplaceItem } from '@/lib/api'
 import { type MarketItem, initialMarketItems } from '@/lib/data'
+import { getUserProfile } from '@/lib/user-profile'
 
 export default function MarketplacePage() {
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('All')
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest')
   const [items, setItems] = useState<MarketItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<{ id: number; name: string } | null>(null)
 
   // Modals & Drawers
   const [showListModal, setShowListModal] = useState(false)
@@ -57,6 +61,18 @@ export default function MarketplacePage() {
     setToast(msg)
     setTimeout(() => setToast(null), 3500)
   }
+
+  // Load current user profile for ownership detection
+  useEffect(() => {
+    api.auth.me().then((me) => {
+      if (me) {
+        setCurrentUser({ id: me.id, name: me.full_name })
+      }
+    }).catch(() => {
+      const local = getUserProfile()
+      if (local) setCurrentUser({ id: 0, name: local.name })
+    })
+  }, [])
 
   // Preset academic photo pairs for fast student testing
   const samplePhotoSets: Record<string, string[]> = {
@@ -88,6 +104,7 @@ export default function MarketplacePage() {
         if (Array.isArray(liveItems) && liveItems.length > 0) {
           const mapped: MarketItem[] = liveItems.map((item, idx) => ({
             id: String(item.id),
+            seller_id: item.seller_id,
             title: item.title,
             seller: item.seller_name || 'Campus Student',
             price: item.price,
@@ -208,8 +225,9 @@ export default function MarketplacePage() {
 
       const newItem: MarketItem = {
         id: String(created.id),
+        seller_id: created.seller_id || currentUser?.id,
         title: created.title,
-        seller: created.seller_name || 'You',
+        seller: created.seller_name || currentUser?.name || 'You',
         price: created.price,
         tag: created.tag,
         location,
@@ -232,8 +250,9 @@ export default function MarketplacePage() {
       // Local optimistic fallback
       const newItem: MarketItem = {
         id: `mkt-${Date.now()}`,
+        seller_id: currentUser?.id,
         title,
-        seller: 'You',
+        seller: currentUser?.name || 'You',
         price,
         tag,
         location,
@@ -254,12 +273,77 @@ export default function MarketplacePage() {
     }
   }
 
-  const handleSendInquiry = (e: React.FormEvent) => {
+  // Check if active item belongs to the logged-in user
+  const isOwner = Boolean(
+    selectedItem &&
+    currentUser &&
+    (
+      (selectedItem.seller_id && currentUser.id && selectedItem.seller_id === currentUser.id) ||
+      (selectedItem.seller && currentUser.name && selectedItem.seller.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) ||
+      selectedItem.seller.trim().toLowerCase() === 'you'
+    )
+  )
+
+  const handleDeleteListing = async (item: MarketItem) => {
+    if (!confirm(`Are you sure you want to delete your listing "${item.title}"?`)) return
+    try {
+      if (item.id && !item.id.startsWith('mkt-')) {
+        await api.marketplace.delete(Number(item.id))
+      }
+    } catch (err) {
+      console.warn('Could not delete marketplace item on server:', err)
+    }
+    setItems((prev) => prev.filter((i) => i.id !== item.id))
+    setSelectedItem(null)
+    showToastMsg(`Listing "${item.title}" deleted.`)
+  }
+
+  const handleMarkAsSold = (item: MarketItem) => {
+    setItems((prev) =>
+      prev.map((i) => (i.id === item.id ? { ...i, quantity: 0, condition: 'Sold Out' } : i))
+    )
+    if (selectedItem?.id === item.id) {
+      setSelectedItem((prev) => (prev ? { ...prev, quantity: 0, condition: 'Sold Out' } : null))
+    }
+    showToastMsg(`Listing "${item.title}" marked as sold!`)
+  }
+
+  const handleSendInquiry = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!contactItem) return
-    showToastMsg(`Inquiry sent to ${contactItem.seller}!`)
+
+    const sellerId = contactItem.seller_id || 1
+    const contactKey = `dm-${sellerId}`
+    const text = contactMessage.trim()
+    if (!text) return
+
+    try {
+      await api.chat.sendDirectMessage(sellerId, { content: text })
+    } catch (err) {
+      console.warn('Direct message API notice:', err)
+    }
+
+    const optimisticMsg = {
+      id: `msg-${Date.now()}`,
+      sender: `${currentUser?.name || 'You'} (You)`,
+      avatar: (currentUser?.name || 'ME').split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase(),
+      role: 'you' as const,
+      text: text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isMine: true,
+    }
+    try {
+      localStorage.setItem(`pending_market_inquiry_${contactKey}`, JSON.stringify(optimisticMsg))
+    } catch (e) {
+      console.warn('Could not store pending inquiry:', e)
+    }
+
+    showToastMsg(`Inquiry sent to ${contactItem.seller}! Opening direct messages...`)
+    const sellerName = contactItem.seller
     setContactItem(null)
     setContactMessage('')
+
+    router.push(`/dashboard/messages?contactId=${contactKey}&name=${encodeURIComponent(sellerName)}`)
   }
 
   const openItemDetails = (item: MarketItem) => {
@@ -534,6 +618,21 @@ export default function MarketplacePage() {
             <div className="market-sheet-header">
               <div className="market-sheet-header-left">
                 <Pill>{selectedItem.tag}</Pill>
+                {isOwner && (
+                  <span
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: '12px',
+                      background: 'rgba(99, 102, 241, 0.12)',
+                      color: '#4f46e5',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      border: '1px solid rgba(99, 102, 241, 0.25)',
+                    }}
+                  >
+                    Your Listing
+                  </span>
+                )}
                 <span className="market-sheet-header-title">Item Details</span>
               </div>
               <button
@@ -675,34 +774,44 @@ export default function MarketplacePage() {
 
             {/* Sticky Sheet Footer Actions */}
             <div className="market-sheet-footer">
-              {selectedItem.phone && (
-                <a
-                  href={`https://wa.me/${selectedItem.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                    `Hi ${selectedItem.seller}, I saw your listing "${selectedItem.title}" on Gradia and would like to buy it.`
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="market-whatsapp-btn"
+              {isOwner ? (
+                <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    style={{ flex: 1, justifyContent: 'center', color: '#ef4444', borderColor: '#fca5a5' }}
+                    onClick={() => handleDeleteListing(selectedItem)}
+                  >
+                    <Trash2 style={{ width: 14, height: 14 }} />
+                    Delete Listing
+                  </button>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    style={{ flex: 1, justifyContent: 'center', background: '#059669', borderColor: '#059669' }}
+                    onClick={() => handleMarkAsSold(selectedItem)}
+                  >
+                    <CheckCircle2 style={{ width: 14, height: 14 }} />
+                    Mark as Sold
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="primary-button"
+                  style={{ flex: 1, justifyContent: 'center', padding: '12px' }}
+                  onClick={() => {
+                    setContactItem(selectedItem)
+                    setContactMessage(
+                      `Hi ${selectedItem.seller}, I saw your listing "${selectedItem.title}" (${selectedItem.price}) on Gradia and I am interested in purchasing it.`
+                    )
+                    setSelectedItem(null)
+                  }}
                 >
-                  <Phone style={{ width: 14, height: 14 }} />
-                  WhatsApp / Call
-                </a>
+                  <MessageCircle style={{ width: 15, height: 15 }} />
+                  Message Seller
+                </button>
               )}
-              <button
-                type="button"
-                className="primary-button"
-                style={{ flex: 1, justifyContent: 'center' }}
-                onClick={() => {
-                  setContactItem(selectedItem)
-                  setContactMessage(
-                    `Hi ${selectedItem.seller}, I saw your listing "${selectedItem.title}" on Gradia and I am interested in purchasing it.`
-                  )
-                  setSelectedItem(null)
-                }}
-              >
-                <MessageCircle style={{ width: 14, height: 14 }} />
-                Message Seller
-              </button>
             </div>
           </aside>
         </div>

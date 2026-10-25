@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import {
   BookOpen,
   Check,
@@ -131,10 +132,59 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
     return { id: 0, name: local?.name || 'Student' }
   })
 
+  const searchParams = useSearchParams()
+  const paramContactId = searchParams?.get('contactId')
+  const paramContactName = searchParams?.get('name')
+
   const showToastMsg = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(null), 3500)
   }
+
+  // Handle marketplace seller redirection
+  useEffect(() => {
+    if (direct && paramContactId) {
+      setActiveContactId(paramContactId)
+      const decodedName = paramContactName ? decodeURIComponent(paramContactName) : 'Campus Seller'
+      setContacts((prev) => {
+        if (prev.some((c) => c.id === paramContactId)) return prev
+        const sellerContact: DirectContact = {
+          id: paramContactId,
+          name: decodedName,
+          role: 'Campus Seller',
+          department: 'Student Marketplace',
+          level: 'Active',
+          online: true,
+          avatar: decodedName
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase() || 'CS',
+          lastMessage: 'Marketplace listing inquiry',
+          time: 'Just now',
+        }
+        return [sellerContact, ...prev]
+      })
+
+      // Check if there is an optimistic pending message from marketplace
+      try {
+        const pendingKey = `pending_market_inquiry_${paramContactId}`
+        const pending = localStorage.getItem(pendingKey)
+        if (pending) {
+          const parsed: MessageItem = JSON.parse(pending)
+          localStorage.removeItem(pendingKey)
+          setConversationMessages((prev) => {
+            const list = prev[paramContactId] || []
+            if (list.some((m) => m.id === parsed.id)) return prev
+            return { ...prev, [paramContactId]: [...list, parsed] }
+          })
+        }
+      } catch (e) {
+        console.warn('Pending message load error:', e)
+      }
+    }
+  }, [direct, paramContactId, paramContactName])
 
   // Active object references
   const currentGroup = channels.find((g) => g.id === activeGroupId) || channels[0] || {
