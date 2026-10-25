@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Pill } from '@/components/pill'
+import { Skeleton } from '@/components/ui/skeleton'
 import { api, type MarketplaceItem } from '@/lib/api'
 import { type MarketItem } from '@/lib/data'
 
@@ -278,66 +279,84 @@ export default function MarketplacePage() {
 
       {/* Grid of Marketplace Cards */}
       <div className="market-grid">
-        {filtered.map((item) => (
-          <article
-            className="market-card"
-            key={item.id || item.title}
-            style={{ cursor: 'pointer' }}
-            onClick={() => setSelectedItem(item)}
-          >
-            <div className={`market-thumb ${item.imageTone || 'indigo'}`}>
-              <BookOpen />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Pill>{item.tag}</Pill>
-              {item.verified && (
-                <span
-                  style={{
-                    fontSize: '10px',
-                    color: '#16a34a',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px',
+        {loading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <article className="market-card" key={i} style={{ display: 'flex', flexDirection: 'column' }}>
+              <Skeleton style={{ height: '110px', width: '100%', borderRadius: '8px', marginBottom: '12px' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <Skeleton style={{ width: '80px', height: '18px', borderRadius: '12px' }} />
+                <Skeleton style={{ width: '70px', height: '14px' }} />
+              </div>
+              <Skeleton style={{ width: '85%', height: '16px', marginBottom: '6px' }} />
+              <Skeleton style={{ width: '60%', height: '14px', marginBottom: '14px' }} />
+              <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Skeleton style={{ width: '60px', height: '20px' }} />
+                <Skeleton style={{ width: '70px', height: '16px' }} />
+              </div>
+            </article>
+          ))
+        ) : (
+          filtered.map((item) => (
+            <article
+              className="market-card"
+              key={item.id || item.title}
+              style={{ cursor: 'pointer' }}
+              onClick={() => setSelectedItem(item)}
+            >
+              <div className={`market-thumb ${item.imageTone || 'indigo'}`}>
+                <BookOpen />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Pill>{item.tag}</Pill>
+                {item.verified && (
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      color: '#16a34a',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <ShieldCheck style={{ width: '13px' }} /> Verified Seller
+                  </span>
+                )}
+              </div>
+
+              <h3 style={{ fontSize: '13px', lineHeight: 1.35, minHeight: '36px' }}>{item.title}</h3>
+
+              <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <span>{item.seller}</span>
+                {item.location && (
+                  <small style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', color: '#94a3b8' }}>
+                    <MapPin style={{ width: '12px' }} /> {item.location}
+                  </small>
+                )}
+              </div>
+
+              <div className="market-card-footer" style={{ marginTop: 'auto', paddingTop: '10px' }}>
+                <strong style={{ fontSize: '15px', color: '#0f172a' }}>{item.price}</strong>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setContactItem(item)
+                    setContactMessage(
+                      `Hi ${item.seller}, I saw your listing "${item.title}" on Gradia and I'm interested in getting it.`
+                    )
                   }}
                 >
-                  <ShieldCheck style={{ width: '13px' }} /> Verified Seller
-                </span>
-              )}
-            </div>
-
-            <h3 style={{ fontSize: '13px', lineHeight: 1.35, minHeight: '36px' }}>{item.title}</h3>
-
-            <div style={{ fontSize: '11px', color: '#64748b' }}>
-              <span>{item.seller}</span>
-              {item.location && (
-                <small style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', color: '#94a3b8' }}>
-                  <MapPin style={{ width: '12px' }} /> {item.location}
-                </small>
-              )}
-            </div>
-
-            <div className="market-card-footer" style={{ marginTop: 'auto', paddingTop: '10px' }}>
-              <strong style={{ fontSize: '15px', color: '#0f172a' }}>{item.price}</strong>
-              <button
-                type="button"
-                className="text-button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setContactItem(item)
-                  setContactMessage(
-                    `Hi ${item.seller}, I saw your listing "${item.title}" on Gradia and I'm interested in getting it.`
-                  )
-                }}
-              >
-                Message seller <ChevronRight />
-              </button>
-            </div>
-          </article>
-        ))}
+                  Message seller <ChevronRight />
+                </button>
+              </div>
+            </article>
+          ))
+        )}
       </div>
 
-      {filtered.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--card)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
           <Store style={{ width: '40px', height: '40px', color: '#6366f1', margin: '0 auto 12px', opacity: 0.8 }} />
           <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--foreground)' }}>No marketplace items listed yet</h3>

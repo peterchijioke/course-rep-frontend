@@ -20,6 +20,7 @@ import {
 import { PageHeader } from '@/components/page-header'
 import { Panel } from '@/components/panel'
 import { Pill } from '@/components/pill'
+import { Skeleton } from '@/components/ui/skeleton'
 import { api, type TimetableSlot, type Course } from '@/lib/api'
 
 const MONTH_NAMES = [
@@ -738,7 +739,23 @@ export default function CalendarPage() {
         </div>
 
         <div className="schedule-list">
-          {selectedDateEvents.length === 0 ? (
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '10px 0' }}>
+              {[1, 2, 3].map((i) => (
+                <div className="schedule-item" key={i} style={{ display: 'flex', gap: '16px', alignItems: 'stretch' }}>
+                  <div style={{ width: '48px', paddingTop: '4px' }}>
+                    <Skeleton style={{ width: '40px', height: '14px', marginBottom: '4px' }} />
+                    <Skeleton style={{ width: '20px', height: '10px' }} />
+                  </div>
+                  <div style={{ flex: 1, padding: '14px', borderRadius: '0 8px 8px 0', borderLeft: '4px solid #c7d2fe', background: 'var(--secondary)' }}>
+                    <Skeleton style={{ width: '65px', height: '16px', borderRadius: '10px', marginBottom: '8px' }} />
+                    <Skeleton style={{ width: '70%', height: '15px', marginBottom: '8px' }} />
+                    <Skeleton style={{ width: '120px', height: '12px' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : selectedDateEvents.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '42px 16px' }}>
               <div
                 style={{

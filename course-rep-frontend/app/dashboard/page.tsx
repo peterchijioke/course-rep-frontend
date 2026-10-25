@@ -16,6 +16,7 @@ import {
 import { PageHeader } from '@/components/page-header'
 import { Panel } from '@/components/panel'
 import { Pill } from '@/components/pill'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   api,
   getAuthToken,
@@ -200,12 +201,21 @@ export default function DashboardOverviewPage() {
           <div className="stat-icon purple">
             <BookOpen />
           </div>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <span>Enrolled courses</span>
-            <strong>{mounted ? enrolledCourses.length : 0}</strong>
-            <small className={enrolledCourses.length === 0 ? 'warning-text' : ''}>
-              {enrolledCourses.length === 0 ? 'Configuration pending' : 'All courses active'}
-            </small>
+            {loading ? (
+              <div style={{ marginTop: '7px' }}>
+                <Skeleton style={{ height: '26px', width: '38px', marginBottom: '6px' }} />
+                <Skeleton style={{ height: '11px', width: '85px' }} />
+              </div>
+            ) : (
+              <>
+                <strong>{mounted ? enrolledCourses.length : 0}</strong>
+                <small className={enrolledCourses.length === 0 ? 'warning-text' : ''}>
+                  {enrolledCourses.length === 0 ? 'Configuration pending' : 'All courses active'}
+                </small>
+              </>
+            )}
           </div>
         </div>
 
@@ -213,10 +223,19 @@ export default function DashboardOverviewPage() {
           <div className="stat-icon blue">
             <CalendarDays />
           </div>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <span>Upcoming timetable slots</span>
-            <strong>{timetableSlots.length}</strong>
-            <small>{timetableSlots.length === 0 ? 'No lectures today' : `${timetableSlots.length} items scheduled`}</small>
+            {loading ? (
+              <div style={{ marginTop: '7px' }}>
+                <Skeleton style={{ height: '26px', width: '38px', marginBottom: '6px' }} />
+                <Skeleton style={{ height: '11px', width: '95px' }} />
+              </div>
+            ) : (
+              <>
+                <strong>{timetableSlots.length}</strong>
+                <small>{timetableSlots.length === 0 ? 'No lectures today' : `${timetableSlots.length} items scheduled`}</small>
+              </>
+            )}
           </div>
         </div>
 
@@ -224,12 +243,21 @@ export default function DashboardOverviewPage() {
           <div className="stat-icon amber">
             <FileText />
           </div>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <span>Announcements</span>
-            <strong>{Array.isArray(announcementsList) ? announcementsList.length : 0}</strong>
-            <small className={Array.isArray(announcementsList) && announcementsList.some((a) => !a.is_read) ? 'warning-text' : ''}>
-              {Array.isArray(announcementsList) ? announcementsList.filter((a) => !a.is_read).length : 0} unread updates
-            </small>
+            {loading ? (
+              <div style={{ marginTop: '7px' }}>
+                <Skeleton style={{ height: '26px', width: '38px', marginBottom: '6px' }} />
+                <Skeleton style={{ height: '11px', width: '85px' }} />
+              </div>
+            ) : (
+              <>
+                <strong>{Array.isArray(announcementsList) ? announcementsList.length : 0}</strong>
+                <small className={Array.isArray(announcementsList) && announcementsList.some((a) => !a.is_read) ? 'warning-text' : ''}>
+                  {Array.isArray(announcementsList) ? announcementsList.filter((a) => !a.is_read).length : 0} unread updates
+                </small>
+              </>
+            )}
           </div>
         </div>
 
@@ -237,13 +265,22 @@ export default function DashboardOverviewPage() {
           <div className="stat-icon emerald" style={{ background: '#ecfdf5', color: '#059669' }}>
             <GraduationCap />
           </div>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <span>Target GPA</span>
-            <strong>
-              {profile.targetCGPA || 4.52}{' '}
-              <small style={{ fontSize: '11px', color: '#64748b' }}>/ 5.0</small>
-            </strong>
-            <small style={{ color: '#059669' }}>First Class Target</small>
+            {loading ? (
+              <div style={{ marginTop: '7px' }}>
+                <Skeleton style={{ height: '26px', width: '48px', marginBottom: '6px' }} />
+                <Skeleton style={{ height: '11px', width: '100px' }} />
+              </div>
+            ) : (
+              <>
+                <strong>
+                  {profile.targetCGPA || 4.52}{' '}
+                  <small style={{ fontSize: '11px', color: '#64748b' }}>/ 5.0</small>
+                </strong>
+                <small style={{ color: '#059669' }}>First Class Target</small>
+              </>
+            )}
           </div>
         </Link>
       </div>
@@ -261,7 +298,24 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
           <div className="announcement-list">
-            {!Array.isArray(announcementsList) || announcementsList.length === 0 ? (
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '6px 0' }}>
+                {[1, 2].map((i) => (
+                  <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', borderTop: i > 1 ? '1px solid var(--border)' : 'none', paddingTop: i > 1 ? '14px' : '0' }}>
+                    <Skeleton style={{ width: '30px', height: '30px', borderRadius: '7px', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                        <Skeleton style={{ width: '60px', height: '18px', borderRadius: '12px' }} />
+                        <Skeleton style={{ width: '45px', height: '18px', borderRadius: '12px' }} />
+                      </div>
+                      <Skeleton style={{ width: '75%', height: '15px', marginBottom: '6px' }} />
+                      <Skeleton style={{ width: '90%', height: '12px', marginBottom: '6px' }} />
+                      <Skeleton style={{ width: '35%', height: '10px' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : !Array.isArray(announcementsList) || announcementsList.length === 0 ? (
               <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
                 No announcements broadcasted yet.
               </div>
@@ -305,7 +359,17 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
 
-          {nextLectureSlot ? (
+          {loading ? (
+            <div className="lecture-card-body" style={{ flex: 1, display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+              <Skeleton style={{ width: '58px', height: '68px', borderRadius: '8px', flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Skeleton style={{ width: '70px', height: '18px', borderRadius: '12px', marginBottom: '10px' }} />
+                <Skeleton style={{ width: '80%', height: '16px', marginBottom: '10px' }} />
+                <Skeleton style={{ width: '120px', height: '13px', marginBottom: '8px' }} />
+                <Skeleton style={{ width: '100px', height: '13px' }} />
+              </div>
+            </div>
+          ) : nextLectureSlot ? (
             <div className="lecture-card-body">
               <div className="lecture-date">
                 <span>{nextLectureSlot.date.split(' ')[0] || 'CLASS'}</span>
@@ -330,7 +394,7 @@ export default function DashboardOverviewPage() {
           )}
 
           <div className="lecture-footer">
-            <span>{nextLectureSlot ? nextLectureSlot.course_code : 'Timetable clear'}</span>
+            <span>{loading ? <Skeleton style={{ width: '60px', height: '12px' }} /> : nextLectureSlot ? nextLectureSlot.course_code : 'Timetable clear'}</span>
             <Link href="/dashboard/calendar" className="text-button">
               View full timetable
             </Link>
@@ -351,7 +415,21 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
           <div className="deadline-list">
-            {timetableSlots.length === 0 ? (
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '6px 0' }}>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', borderTop: i > 1 ? '1px solid var(--border)' : 'none', paddingTop: i > 1 ? '12px' : '0' }}>
+                    <Skeleton style={{ width: '38px', height: '42px', borderRadius: '6px', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Skeleton style={{ width: '60px', height: '14px', borderRadius: '10px', marginBottom: '6px' }} />
+                      <Skeleton style={{ width: '75%', height: '13px', marginBottom: '4px' }} />
+                      <Skeleton style={{ width: '90px', height: '10px' }} />
+                    </div>
+                    <Skeleton style={{ width: '50px', height: '18px', borderRadius: '6px' }} />
+                  </div>
+                ))}
+              </div>
+            ) : timetableSlots.length === 0 ? (
               <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
                 No events on your calendar yet.
               </div>
@@ -381,7 +459,9 @@ export default function DashboardOverviewPage() {
             <div>
               <h2>My courses</h2>
               <p>
-                {enrolledCourses.length > 0
+                {loading
+                  ? 'Loading courses...'
+                  : enrolledCourses.length > 0
                   ? `${enrolledCourses.length} active courses`
                   : 'Courses pending'}
               </p>
@@ -391,7 +471,20 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
 
-          {enrolledCourses.length === 0 ? (
+          {loading ? (
+            <div className="course-list">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '12px 0', borderTop: i > 1 ? '1px solid var(--border)' : 'none' }}>
+                  <Skeleton style={{ width: '34px', height: '34px', borderRadius: '8px', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Skeleton style={{ width: '65px', height: '14px', marginBottom: '5px' }} />
+                    <Skeleton style={{ width: '80%', height: '12px' }} />
+                  </div>
+                  <Skeleton style={{ width: '100px', height: '20px', borderRadius: '6px' }} />
+                </div>
+              ))}
+            </div>
+          ) : enrolledCourses.length === 0 ? (
             <div style={{ padding: '24px 16px', textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <div
                 style={{
@@ -457,7 +550,20 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
           <div className="marketplace-preview-list">
-            {marketItems.length === 0 ? (
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '10px 14px', borderRadius: '9px', border: '1px solid var(--border)' }}>
+                    <Skeleton style={{ width: '34px', height: '34px', borderRadius: '8px', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Skeleton style={{ width: '70%', height: '13px', marginBottom: '5px' }} />
+                      <Skeleton style={{ width: '45%', height: '10px' }} />
+                    </div>
+                    <Skeleton style={{ width: '14px', height: '14px', borderRadius: '50%' }} />
+                  </div>
+                ))}
+              </div>
+            ) : marketItems.length === 0 ? (
               <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
                 No marketplace listings yet.
               </div>

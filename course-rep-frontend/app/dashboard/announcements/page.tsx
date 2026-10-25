@@ -19,6 +19,7 @@ import {
 import { PageHeader } from '@/components/page-header'
 import { Panel } from '@/components/panel'
 import { Pill } from '@/components/pill'
+import { Skeleton } from '@/components/ui/skeleton'
 import { api, type AnnouncementItem } from '@/lib/api'
 import { type DetailedAnnouncement } from '@/lib/data'
 
@@ -288,67 +289,98 @@ export default function AnnouncementsPage() {
       {/* Announcements List */}
       <Panel>
         <div className="announcement-list" style={{ padding: '0 20px 10px' }}>
-          {filtered.map((item) => (
-            <article
-              className={`announcement ${item.urgent ? 'urgent' : ''}`}
-              key={item.id}
-              style={{
-                cursor: 'pointer',
-                opacity: item.read ? 0.85 : 1,
-                padding: '16px 0',
-              }}
-              onClick={() => handleOpenNotice(item)}
-            >
-              <div className="announcement-icon">
-                <Bell />
-              </div>
-              <div className="announcement-copy">
-                <div className="announcement-meta">
-                  <Pill>{item.course}</Pill>
-                  {item.urgent && <Pill tone="urgent-pill">Urgent</Pill>}
-                  {item.venue && (
-                    <span style={{ fontSize: '10px', color: '#4338ca', fontWeight: 600 }}>
-                      <MapPin style={{ width: '11px', display: 'inline', marginRight: '2px' }} />
-                      {item.venue}
-                    </span>
-                  )}
-                  <span className="time">{item.time}</span>
-                </div>
-                <h3 style={{ fontSize: '14px', marginBottom: '4px' }}>{item.title}</h3>
-                <p style={{ fontSize: '12px', lineHeight: 1.5, margin: '0 0 6px' }}>{item.body}</p>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span className="author">Posted by {item.author}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      onClick={(e) => handleTogglePin(item.id, e)}
-                      title={item.pinned ? 'Remove bookmark' : 'Bookmark notice'}
-                      style={{ minWidth: '28px', minHeight: '28px', color: item.pinned ? '#4338ca' : '#94a3b8' }}
-                    >
-                      {item.pinned ? <BookmarkCheck style={{ width: '16px' }} /> : <Bookmark style={{ width: '16px' }} />}
-                    </button>
-                    {!item.read && (
-                      <span
-                        style={{
-                          width: '7px',
-                          height: '7px',
-                          borderRadius: '50%',
-                          background: '#4338ca',
-                        }}
-                      />
-                    )}
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', padding: '8px 0' }}>
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    gap: '14px',
+                    padding: '18px 0',
+                    borderTop: i > 1 ? '1px solid var(--border)' : 'none',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <Skeleton style={{ width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                      <Skeleton style={{ width: '65px', height: '18px', borderRadius: '12px' }} />
+                      <Skeleton style={{ width: '80px', height: '14px', marginLeft: 'auto' }} />
+                    </div>
+                    <Skeleton style={{ width: '60%', height: '16px', marginBottom: '8px' }} />
+                    <Skeleton style={{ width: '90%', height: '13px', marginBottom: '6px' }} />
+                    <Skeleton style={{ width: '75%', height: '13px', marginBottom: '10px' }} />
+                    <Skeleton style={{ width: '120px', height: '11px' }} />
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
-
-          {filtered.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
-              <Bell style={{ width: '32px', height: '32px', margin: '0 auto 8px', color: '#cbd5e1' }} />
-              <p style={{ margin: 0, fontSize: '13px' }}>No announcements match your filter.</p>
+              ))}
             </div>
+          ) : (
+            <>
+              {filtered.map((item) => (
+                <article
+                  className={`announcement ${item.urgent ? 'urgent' : ''}`}
+                  key={item.id}
+                  style={{
+                    cursor: 'pointer',
+                    opacity: item.read ? 0.85 : 1,
+                    padding: '16px 0',
+                  }}
+                  onClick={() => handleOpenNotice(item)}
+                >
+                  <div className="announcement-icon">
+                    <Bell />
+                  </div>
+                  <div className="announcement-copy">
+                    <div className="announcement-meta">
+                      <Pill>{item.course}</Pill>
+                      {item.urgent && <Pill tone="urgent-pill">Urgent</Pill>}
+                      {item.venue && (
+                        <span style={{ fontSize: '10px', color: '#4338ca', fontWeight: 600 }}>
+                          <MapPin style={{ width: '11px', display: 'inline', marginRight: '2px' }} />
+                          {item.venue}
+                        </span>
+                      )}
+                      <span className="time">{item.time}</span>
+                    </div>
+                    <h3 style={{ fontSize: '14px', marginBottom: '4px' }}>{item.title}</h3>
+                    <p style={{ fontSize: '12px', lineHeight: 1.5, margin: '0 0 6px' }}>{item.body}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span className="author">Posted by {item.author}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={(e) => handleTogglePin(item.id, e)}
+                          title={item.pinned ? 'Remove bookmark' : 'Bookmark notice'}
+                          style={{ minWidth: '28px', minHeight: '28px', color: item.pinned ? '#4338ca' : '#94a3b8' }}
+                        >
+                          {item.pinned ? <BookmarkCheck style={{ width: '16px' }} /> : <Bookmark style={{ width: '16px' }} />}
+                        </button>
+                        {!item.read && (
+                          <span
+                            style={{
+                              width: '7px',
+                              height: '7px',
+                              borderRadius: '50%',
+                              background: '#4338ca',
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+
+              {filtered.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+                  <Bell style={{ width: '32px', height: '32px', margin: '0 auto 8px', color: '#cbd5e1' }} />
+                  <p style={{ margin: 0, fontSize: '13px' }}>No announcements match your filter.</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </Panel>
