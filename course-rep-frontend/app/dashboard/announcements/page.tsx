@@ -58,12 +58,14 @@ export default function AnnouncementsPage() {
             urgent: item.is_urgent,
             read: item.is_read,
             pinned: false,
-            category: 'Course Bulletin',
+            category: 'General',
           }))
           setItems(mapped)
         }
-      } catch (err) {
-        console.error('Failed to load announcements:', err)
+      } catch (err: any) {
+        if (!err?.message?.includes('expired') && !err?.message?.includes('token')) {
+          console.error('Failed to load announcements:', err)
+        }
       }
       setLoading(false)
     }

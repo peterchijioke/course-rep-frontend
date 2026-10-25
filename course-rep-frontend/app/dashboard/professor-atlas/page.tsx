@@ -193,8 +193,8 @@ export default function ProfessorAtlasPage() {
 
       return {
         code: c.code,
-        name: c.name || c.title || c.code,
-        units: c.units || 3,
+        name: c.name || (c as any).title || c.code,
+        units: (c as any).units || 3,
         caScore,
         caMax,
         minExamForA,

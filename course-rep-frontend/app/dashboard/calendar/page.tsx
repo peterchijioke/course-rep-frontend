@@ -79,26 +79,34 @@ export default function CalendarPage() {
 
   // Load backend timetable slots and enrolled courses
   useEffect(() => {
+    let isMounted = true
     const fetchTimetableAndCourses = async () => {
       setLoading(true)
       try {
         const slots = await api.timetable.getAll()
-        setEvents(slots || [])
-      } catch (err) {
-        console.error('Failed to load timetable:', err)
+        if (isMounted) setEvents(slots || [])
+      } catch (err: any) {
+        if (!err?.message?.includes('expired') && !err?.message?.includes('token')) {
+          console.error('Failed to load timetable:', err)
+        }
       }
 
       try {
         const c = await api.courses.getMyEnrolled()
         const all = Array.isArray(c) && c.length > 0 ? c : await api.courses.getAll()
-        setCoursesList(all || [])
-      } catch (err) {
-        console.error('Failed to load courses:', err)
+        if (isMounted) setCoursesList(all || [])
+      } catch (err: any) {
+        if (!err?.message?.includes('expired') && !err?.message?.includes('token')) {
+          console.error('Failed to load courses:', err)
+        }
       }
-      setLoading(false)
+      if (isMounted) setLoading(false)
     }
 
     fetchTimetableAndCourses()
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   // Month navigation helpers

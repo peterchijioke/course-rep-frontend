@@ -179,6 +179,19 @@ export interface AcademicRecord {
   last_synced_at: string
 }
 
+let isRedirectingToLogin = false
+
+export function handleAuthExpired() {
+  clearAuthToken()
+  if (typeof window !== 'undefined' && !isRedirectingToLogin) {
+    const currentPath = window.location.pathname
+    if (!currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
+      isRedirectingToLogin = true
+      window.location.href = `/login?redirect=${encodeURIComponent(currentPath + window.location.search)}`
+    }
+  }
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -199,12 +212,34 @@ export async function apiRequest<T>(
     headers,
   })
 
-  const data = await response.json()
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || data.error || 'API Request failed')
+  let data: any = null
+  try {
+    data = await response.json()
+  } catch {
+    data = null
   }
 
-  return data.data as T
+  if (!response.ok || (data && data.success === false)) {
+    const message = data?.message || data?.error || `API Request failed (${response.status})`
+
+    const isAuthEndpoint = endpoint === '/auth/login' || endpoint === '/auth/register'
+    if (
+      !isAuthEndpoint &&
+      (response.status === 401 ||
+        (typeof message === 'string' && (
+          message.toLowerCase().includes('token is expired') ||
+          message.toLowerCase().includes('invalid or expired token') ||
+          message.toLowerCase().includes('token has invalid claims') ||
+          message.toLowerCase().includes('unauthorized')
+        )))
+    ) {
+      handleAuthExpired()
+    }
+
+    throw new Error(message)
+  }
+
+  return (data?.data !== undefined ? data.data : data) as T
 }
 
 // Module-level API helpers

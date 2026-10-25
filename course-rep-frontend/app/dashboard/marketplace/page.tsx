@@ -68,8 +68,10 @@ export default function MarketplacePage() {
           }))
           setItems(mapped)
         }
-      } catch (err) {
-        console.error('Failed to load marketplace items:', err)
+      } catch (err: any) {
+        if (!err?.message?.includes('expired') && !err?.message?.includes('token')) {
+          console.error('Failed to load marketplace items:', err)
+        }
       }
       setLoading(false)
     }
@@ -360,7 +362,7 @@ export default function MarketplacePage() {
             <button
               type="button"
               className="primary-button"
-              onClick={() => setShowListItemModal(true)}
+              onClick={() => setShowListModal(true)}
             >
               + List an Item
             </button>

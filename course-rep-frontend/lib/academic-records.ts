@@ -93,6 +93,7 @@ export interface AcademicHistory {
   totalUnitsEarned: number
   overallPoints: number
   overallCGPA: number
+  cgpa?: number
   degreeClass: DegreeClassification
   semesters: SemesterGradeRecord[]
   updatedAt: string
