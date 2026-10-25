@@ -324,7 +324,7 @@ export default function DashboardOverviewPage() {
               </div>
             </div>
           ) : (
-            <div style={{ padding: '36px 16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+            <div style={{ padding: '36px 16px', textAlign: 'center', color: '#64748b', fontSize: '13px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               No upcoming lecture scheduled.
             </div>
           )}
@@ -392,7 +392,7 @@ export default function DashboardOverviewPage() {
           </div>
 
           {enrolledCourses.length === 0 ? (
-            <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+            <div style={{ padding: '24px 16px', textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <div
                 style={{
                   width: '44px',
