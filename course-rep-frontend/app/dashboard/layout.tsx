@@ -83,6 +83,8 @@ export default function DashboardLayout({
             department: liveUser.department,
             level: liveUser.academic_level,
             role: (liveUser.role === 'representative' ? 'rep' : liveUser.role) as any,
+            avatar: liveUser.avatar_url || liveUser.avatar,
+            avatar_url: liveUser.avatar_url || liveUser.avatar,
           }
           saveUserProfile(updated)
           setUserProfile((prev) => ({ ...prev, ...updated }))
@@ -189,8 +191,12 @@ export default function DashboardLayout({
           className="workspace"
           onClick={() => setMobileOpen(false)}
         >
-          <span className="avatar avatar-small">
-            {userProfile.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+          <span className="avatar avatar-small" style={{ overflow: 'hidden', padding: 0 }}>
+            {userProfile.avatar && (userProfile.avatar.startsWith('http://') || userProfile.avatar.startsWith('https://')) ? (
+              <img src={userProfile.avatar} alt={userProfile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              userProfile.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
+            )}
           </span>
           <div>
             <strong>{userProfile.name}</strong>
@@ -262,8 +268,13 @@ export default function DashboardLayout({
               href="/dashboard/settings"
               className="avatar"
               aria-label="User settings"
+              style={{ overflow: 'hidden', padding: 0 }}
             >
-              {userProfile.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+              {userProfile.avatar && (userProfile.avatar.startsWith('http://') || userProfile.avatar.startsWith('https://')) ? (
+                <img src={userProfile.avatar} alt={userProfile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                userProfile.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
+              )}
             </Link>
             <span className="top-name">{userProfile.name}</span>
           </div>

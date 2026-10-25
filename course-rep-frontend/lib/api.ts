@@ -51,6 +51,7 @@ export interface User {
   academic_level: string
   academic_session: string
   avatar: string
+  avatar_url?: string
   courses?: Course[]
 }
 
@@ -199,8 +200,12 @@ export async function apiRequest<T>(
   const token = getAuthToken()
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
+  }
+
+  // Only set application/json if not sending FormData
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json'
   }
 
   if (token) {
@@ -266,6 +271,14 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    uploadAvatar: (file: File) => {
+      const formData = new FormData()
+      formData.append('avatar', file)
+      return apiRequest<{ user: User; avatar: string; avatar_url: string; secure_url: string }>('/upload/avatar', {
+        method: 'POST',
+        body: formData,
+      })
+    },
   },
   courses: {
     getAll: () => apiRequest<Course[]>('/courses'),
@@ -364,5 +377,24 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ question }),
       }),
+  },
+  upload: {
+    avatar: (file: File) => {
+      const formData = new FormData()
+      formData.append('avatar', file)
+      return apiRequest<{ user: User; avatar: string; avatar_url: string; secure_url: string }>('/upload/avatar', {
+        method: 'POST',
+        body: formData,
+      })
+    },
+    document: (file: File, folder?: string) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      if (folder) formData.append('folder', folder)
+      return apiRequest<{ secure_url: string; public_id: string; format: string; bytes: number; file_name: string }>('/upload/document', {
+        method: 'POST',
+        body: formData,
+      })
+    },
   },
 }

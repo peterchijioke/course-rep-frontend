@@ -18,6 +18,8 @@ export interface UserProfile {
     announcements: boolean
   }
   bio: string
+  avatar?: string
+  avatar_url?: string
   createdAt: string
 }
 
