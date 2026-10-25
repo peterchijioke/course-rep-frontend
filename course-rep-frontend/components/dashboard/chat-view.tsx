@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Pill } from '@/components/pill'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   api,
   getWebSocketUrl,
@@ -90,6 +91,8 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
   // Active selections
   const [activeGroupId, setActiveGroupId] = useState('')
   const [activeContactId, setActiveContactId] = useState('')
+  const [loadingList, setLoadingList] = useState(true)
+  const [loadingMessages, setLoadingMessages] = useState(false)
 
   // Lightbox & image zoom state
   const [lightboxImage, setLightboxImage] = useState<{
@@ -159,6 +162,7 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
   // Load current user, groups, and contacts from backend
   useEffect(() => {
     const initData = async () => {
+      setLoadingList(true)
       // 1. Ensure valid JWT auth token
       const token = await ensureAuthToken()
 
@@ -226,6 +230,8 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
       } catch (err) {
         console.warn('Failed to load contacts from API:', err)
         setContacts([])
+      } finally {
+        setLoadingList(false)
       }
 
       // 5. Connect WebSocket with verified token
@@ -317,6 +323,9 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
         }
 
         // Fetch past messages from backend
+        if (!conversationMessages[activeGroupId]) {
+          setLoadingMessages(true)
+        }
         api.chat.getGroupMessages(gid).then((msgs) => {
           if (Array.isArray(msgs)) {
             const mapped: MessageItem[] = msgs.map((m) => ({
@@ -339,6 +348,7 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
             setConversationMessages((prev) => ({ ...prev, [activeGroupId]: mapped }))
           }
         }).catch((e) => console.warn('Could not load group messages:', e))
+          .finally(() => setLoadingMessages(false))
       }
     }
   }, [activeGroupId, direct, currentUser.id])
@@ -348,6 +358,9 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
     if (direct && activeContactId) {
       const recipientId = parseInt(activeContactId.replace(/\D/g, ''))
       if (recipientId) {
+        if (!conversationMessages[activeContactId]) {
+          setLoadingMessages(true)
+        }
         api.chat.getDirectMessages(recipientId).then((msgs) => {
           if (Array.isArray(msgs)) {
             const mapped: MessageItem[] = msgs.map((m) => ({
@@ -370,6 +383,7 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
             setConversationMessages((prev) => ({ ...prev, [activeContactId]: mapped }))
           }
         }).catch((e) => console.warn('Could not load direct messages:', e))
+          .finally(() => setLoadingMessages(false))
       }
     }
   }, [activeContactId, direct, currentUser.id])
@@ -622,16 +636,36 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
       />
 
       {/* Main Chat Layout Container */}
-      <div className="chat-layout" style={{ position: 'relative' }}>
-        {/* Left Sidebar: Channels or Contacts */}
+      <div className="chat-layout" style={{ position: 'relative' }}>        {/* Left Sidebar: Channels or Contacts */}
         <aside className="chat-list" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chat-list-header">
             <strong>{direct ? 'Conversations' : 'Channels & Groups'}</strong>
-            <span>{direct ? contacts.length : channels.length}</span>
+            <span>{loadingList ? <Skeleton style={{ width: '18px', height: '14px', borderRadius: '4px' }} /> : direct ? contacts.length : channels.length}</span>
           </div>
 
           <div style={{ overflowY: 'auto', flex: 1 }}>
-            {!direct ? (
+            {loadingList ? (
+              <div style={{ display: 'flex', flexDirection: 'column', padding: '6px 0' }}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      borderBottom: '1px solid var(--border)',
+                    }}
+                  >
+                    <Skeleton style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Skeleton style={{ width: i % 2 === 0 ? '75%' : '60%', height: '14px', marginBottom: '6px' }} />
+                      <Skeleton style={{ width: i % 2 === 0 ? '45%' : '60%', height: '11px' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : !direct ? (
               <>
                 {/* Section 1: Course Channels */}
                 <div style={{ padding: '10px 16px 4px', fontSize: '9px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -735,21 +769,33 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
           {/* Chat Window Header */}
           <div className="chat-window-header" style={{ justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span className="avatar">
-                {!direct ? (
-                  currentGroup.category === 'course' ? <Hash style={{ width: '16px' }} /> : <Users style={{ width: '16px' }} />
-                ) : (
-                  currentContact.avatar
-                )}
-              </span>
-              <div>
-                <strong>{!direct ? currentGroup.name : currentContact.name}</strong>
-                <small style={{ color: '#64748b' }}>
-                  {!direct
-                    ? `${currentGroup.memberCount} members enrolled · ${currentGroup.codeTag || 'Active Group'}`
-                    : `${currentContact.role} · ${currentContact.online ? 'Active now' : 'Offline'}`}
-                </small>
-              </div>
+              {loadingList ? (
+                <>
+                  <Skeleton style={{ width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0 }} />
+                  <div>
+                    <Skeleton style={{ width: '130px', height: '15px', marginBottom: '5px' }} />
+                    <Skeleton style={{ width: '90px', height: '11px' }} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="avatar">
+                    {!direct ? (
+                      currentGroup.category === 'course' ? <Hash style={{ width: '16px' }} /> : <Users style={{ width: '16px' }} />
+                    ) : (
+                      currentContact.avatar
+                    )}
+                  </span>
+                  <div>
+                    <strong>{!direct ? currentGroup.name : currentContact.name}</strong>
+                    <small style={{ color: '#64748b' }}>
+                      {!direct
+                        ? `${currentGroup.memberCount} members enrolled · ${currentGroup.codeTag || 'Active Group'}`
+                        : `${currentContact.role} · ${currentContact.online ? 'Active now' : 'Offline'}`}
+                    </small>
+                  </div>
+                </>
+              )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -813,7 +859,35 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
               </span>
             </div>
 
-            {currentMessages.length === 0 && (
+            {loadingList || loadingMessages ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px 10px' }}>
+                {/* Incoming bubble skeleton */}
+                <div style={{ display: 'flex', gap: '10px', maxWidth: '75%', alignItems: 'flex-start' }}>
+                  <Skeleton style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton style={{ width: '90px', height: '12px', marginBottom: '6px' }} />
+                    <Skeleton style={{ height: '48px', width: '220px', borderRadius: '12px' }} />
+                  </div>
+                </div>
+
+                {/* Outgoing bubble skeleton */}
+                <div style={{ display: 'flex', gap: '10px', maxWidth: '75%', marginLeft: 'auto', alignItems: 'flex-start', flexDirection: 'row-reverse' }}>
+                  <Skeleton style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0 }} />
+                  <div>
+                    <Skeleton style={{ height: '38px', width: '180px', borderRadius: '12px' }} />
+                  </div>
+                </div>
+
+                {/* Incoming bubble skeleton */}
+                <div style={{ display: 'flex', gap: '10px', maxWidth: '75%', alignItems: 'flex-start' }}>
+                  <Skeleton style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton style={{ width: '70px', height: '12px', marginBottom: '6px' }} />
+                    <Skeleton style={{ height: '62px', width: '260px', borderRadius: '12px' }} />
+                  </div>
+                </div>
+              </div>
+            ) : currentMessages.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b', fontSize: '13px' }}>
                 <MessageCircle style={{ width: '28px', height: '28px', margin: '0 auto 10px', opacity: 0.5, display: 'block' }} />
                 <strong>No messages yet</strong>
@@ -821,13 +895,12 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
                   Send a message below to start the conversation!
                 </p>
               </div>
-            )}
-
-            {currentMessages.map((msg) => (
-              <div
-                className={`chat-message ${msg.isMine ? 'mine' : ''}`}
-                key={msg.id}
-              >
+            ) : (
+              currentMessages.map((msg) => (
+                <div
+                  className={`chat-message ${msg.isMine ? 'mine' : ''}`}
+                  key={msg.id}
+                >
                 <span className="avatar avatar-tiny">
                   {msg.avatar}
                 </span>
@@ -894,7 +967,8 @@ export function ChatView({ direct = false }: { direct?: boolean }) {
                   </small>
                 </div>
               </div>
-            ))}
+            ))
+            )}
           </div>
 
           {/* Composer Footer */}

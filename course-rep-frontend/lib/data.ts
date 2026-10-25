@@ -618,6 +618,8 @@ export interface MarketItem {
   description?: string
   date?: string
   imageTone?: string
+  quantity?: number
+  images?: string[]
 }
 
 export const initialMarketItems: MarketItem[] = [
@@ -634,6 +636,12 @@ export const initialMarketItems: MarketItem[] = [
     description: 'Comprehensive compilation of 6 years past examination questions for Artificial Intelligence with step-by-step heuristic search solutions.',
     date: '2 hrs ago',
     imageTone: 'blue',
+    quantity: 4,
+    images: [
+      'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
+    ],
   },
   {
     id: 'mkt-2',
@@ -648,6 +656,12 @@ export const initialMarketItems: MarketItem[] = [
     description: 'Authentic Casio scientific calculator, perfect for Numerical Analysis (MTH 401) and engineering computations. Clean screen and intact keypad.',
     date: '5 hrs ago',
     imageTone: 'emerald',
+    quantity: 2,
+    images: [
+      'https://images.unsplash.com/photo-1587145820266-a5951ee6f620?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1611125832047-1d7ad1e8e485?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?auto=format&fit=crop&w=800&q=80',
+    ],
   },
   {
     id: 'mkt-3',
@@ -662,6 +676,11 @@ export const initialMarketItems: MarketItem[] = [
     description: '100% thick white cotton lab coat with embroidered department crest and deep side pockets. Suitable for computer hardware and science labs.',
     date: '1 day ago',
     imageTone: 'amber',
+    quantity: 3,
+    images: [
+      'https://images.unsplash.com/photo-1584467735871-8e85353a8413?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=800&q=80',
+    ],
   },
   {
     id: 'mkt-4',
@@ -676,6 +695,11 @@ export const initialMarketItems: MarketItem[] = [
     description: 'Full lecture notes, UML diagrams, and software architectural pattern summaries prepared during Dr. Adaeze Okafor’s classes.',
     date: '2 days ago',
     imageTone: 'indigo',
+    quantity: 1,
+    images: [
+      'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1532012164546-f432f2e37b73?auto=format&fit=crop&w=800&q=80',
+    ],
   },
   {
     id: 'mkt-5',
@@ -690,6 +714,11 @@ export const initialMarketItems: MarketItem[] = [
     description: 'High-speed gigabit LAN and USB hub. Essential for CSC 405 Computer Networks packet sniffing labs and Cisco packet tracer setups.',
     date: '3 days ago',
     imageTone: 'slate',
+    quantity: 5,
+    images: [
+      'https://images.unsplash.com/photo-1544652478-6653e09f18a2?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1591488320449-011701bb6704?auto=format&fit=crop&w=800&q=80',
+    ],
   },
   {
     id: 'mkt-6',
@@ -704,6 +733,12 @@ export const initialMarketItems: MarketItem[] = [
     description: 'Standard computer science reference textbook covering sorting, graph algorithms, dynamic programming, and complexity classes.',
     date: '4 days ago',
     imageTone: 'purple',
+    quantity: 1,
+    images: [
+      'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80',
+    ],
   },
 ]
 

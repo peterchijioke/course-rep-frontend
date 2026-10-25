@@ -1,13 +1,17 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
+  AlertCircle,
   BookOpen,
+  Camera,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Filter,
+  Layers,
   MapPin,
   MessageCircle,
   Phone,
@@ -17,13 +21,15 @@ import {
   Sparkles,
   Store,
   Tag,
+  Trash2,
+  UploadCloud,
   X,
 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Pill } from '@/components/pill'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type MarketplaceItem } from '@/lib/api'
-import { type MarketItem } from '@/lib/data'
+import { type MarketItem, initialMarketItems } from '@/lib/data'
 
 export default function MarketplacePage() {
   const [query, setQuery] = useState('')
@@ -32,11 +38,17 @@ export default function MarketplacePage() {
   const [items, setItems] = useState<MarketItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Modals
+  // Modals & Drawers
   const [showListModal, setShowListModal] = useState(false)
   const [selectedItem, setSelectedItem] = useState<MarketItem | null>(null)
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0)
   const [contactItem, setContactItem] = useState<MarketItem | null>(null)
   const [contactMessage, setContactMessage] = useState('')
+
+  // List Item Form State (Multi-Image + Quantity)
+  const [uploadedImages, setUploadedImages] = useState<string[]>([])
+  const [listingQuantity, setListingQuantity] = useState<number>(1)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Toast
   const [toast, setToast] = useState<string | null>(null)
@@ -46,14 +58,35 @@ export default function MarketplacePage() {
     setTimeout(() => setToast(null), 3500)
   }
 
-  // Fetch live items from backend
+  // Preset academic photo pairs for fast student testing
+  const samplePhotoSets: Record<string, string[]> = {
+    'Study materials': [
+      'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
+    ],
+    Electronics: [
+      'https://images.unsplash.com/photo-1587145820266-a5951ee6f620?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1611125832047-1d7ad1e8e485?auto=format&fit=crop&w=800&q=80',
+    ],
+    'Campus essentials': [
+      'https://images.unsplash.com/photo-1584467735871-8e85353a8413?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=800&q=80',
+    ],
+    Textbooks: [
+      'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=800&q=80',
+    ],
+  }
+
+  // Fetch live items from backend or fallback to initial market items
   useEffect(() => {
     const fetchMarketplace = async () => {
       setLoading(true)
       try {
         const liveItems = await api.marketplace.getAll()
-        if (Array.isArray(liveItems)) {
-          const mapped: MarketItem[] = liveItems.map((item) => ({
+        if (Array.isArray(liveItems) && liveItems.length > 0) {
+          const mapped: MarketItem[] = liveItems.map((item, idx) => ({
             id: String(item.id),
             title: item.title,
             seller: item.seller_name || 'Campus Student',
@@ -66,19 +99,52 @@ export default function MarketplacePage() {
             description: item.description || 'Verified campus exchange listing.',
             date: new Date(item.created_at).toLocaleDateString(),
             imageTone: 'indigo',
+            quantity: 1,
+            images: initialMarketItems[idx % initialMarketItems.length]?.images || [
+              'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80',
+              'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80',
+            ],
           }))
           setItems(mapped)
+        } else {
+          setItems(initialMarketItems)
         }
       } catch (err: any) {
-        if (!err?.message?.includes('expired') && !err?.message?.includes('token')) {
-          console.error('Failed to load marketplace items:', err)
-        }
+        setItems(initialMarketItems)
       }
       setLoading(false)
     }
 
     fetchMarketplace()
   }, [])
+
+  // Handle multi-image file selection
+  const handleImageFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith('image/')) return
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setUploadedImages((prev) => [...prev, String(event.target!.result)])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+    e.target.value = ''
+  }
+
+  const removeUploadedImage = (indexToRemove: number) => {
+    setUploadedImages((prev) => prev.filter((_, idx) => idx !== indexToRemove))
+  }
+
+  const loadSamplePhotos = (category: string) => {
+    const photos = samplePhotoSets[category] || samplePhotoSets['Study materials']
+    setUploadedImages(photos)
+    showToastMsg(`Added ${photos.length} sample photos for ${category}`)
+  }
 
   // Filter & Sort
   const filtered = useMemo(() => {
@@ -113,6 +179,13 @@ export default function MarketplacePage() {
 
   const handlePublish = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+
+    // Enforce at least 2 images
+    if (uploadedImages.length < 2) {
+      showToastMsg('Please add at least 2 photos (front and back/detail) before publishing.')
+      return
+    }
+
     const form = new FormData(e.currentTarget)
     const title = String(form.get('title') || '').trim()
     const price = String(form.get('price') || '').trim() || 'Free'
@@ -121,6 +194,7 @@ export default function MarketplacePage() {
     const condition = String(form.get('condition') || 'Good Condition').trim()
     const phone = String(form.get('phone') || '+234 800 000 0000').trim()
     const description = String(form.get('description') || '').trim()
+    const quantity = parseInt(String(form.get('quantity') || '1'), 10) || 1
 
     if (!title) return
 
@@ -145,11 +219,15 @@ export default function MarketplacePage() {
         description: created.description,
         date: 'Just now',
         imageTone: 'indigo',
+        quantity,
+        images: uploadedImages,
       }
 
       setItems((prev) => [newItem, ...prev])
       setShowListModal(false)
-      showToastMsg(`Listing "${title}" published to campus marketplace!`)
+      setUploadedImages([])
+      setListingQuantity(1)
+      showToastMsg(`Listing "${title}" with ${uploadedImages.length} photos published!`)
     } catch (err: any) {
       // Local optimistic fallback
       const newItem: MarketItem = {
@@ -165,10 +243,14 @@ export default function MarketplacePage() {
         description: description || 'Available for campus pickup.',
         date: 'Just now',
         imageTone: 'indigo',
+        quantity,
+        images: uploadedImages,
       }
       setItems((prev) => [newItem, ...prev])
       setShowListModal(false)
-      showToastMsg(`Listing "${title}" published!`)
+      setUploadedImages([])
+      setListingQuantity(1)
+      showToastMsg(`Listing "${title}" with ${uploadedImages.length} photos published!`)
     }
   }
 
@@ -180,6 +262,11 @@ export default function MarketplacePage() {
     setContactMessage('')
   }
 
+  const openItemDetails = (item: MarketItem) => {
+    setSelectedItem(item)
+    setActivePhotoIndex(0)
+  }
+
   return (
     <>
       <PageHeader
@@ -189,7 +276,11 @@ export default function MarketplacePage() {
           <button
             type="button"
             className="primary-button"
-            onClick={() => setShowListModal(true)}
+            onClick={() => {
+              setUploadedImages([])
+              setListingQuantity(1)
+              setShowListModal(true)
+            }}
           >
             <Plus /> List an item
           </button>
@@ -204,7 +295,7 @@ export default function MarketplacePage() {
           </Pill>
           <h2>Find what you need. Pass on what you no longer use.</h2>
           <p>
-            Peer-to-peer campus commerce built for university students. Transparent pricing in Naira, verified student sellers, and safe hostel/faculty pickup spots.
+            Peer-to-peer campus commerce built for university students. Transparent pricing in Naira, verified student sellers, multi-photo listings, and safe campus pickup spots.
           </p>
         </div>
         <Store />
@@ -282,7 +373,7 @@ export default function MarketplacePage() {
         {loading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <article className="market-card" key={i} style={{ display: 'flex', flexDirection: 'column' }}>
-              <Skeleton style={{ height: '110px', width: '100%', borderRadius: '8px', marginBottom: '12px' }} />
+              <Skeleton style={{ height: '156px', width: '100%', borderRadius: '8px', marginBottom: '12px' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                 <Skeleton style={{ width: '80px', height: '18px', borderRadius: '12px' }} />
                 <Skeleton style={{ width: '70px', height: '14px' }} />
@@ -296,63 +387,96 @@ export default function MarketplacePage() {
             </article>
           ))
         ) : (
-          filtered.map((item) => (
-            <article
-              className="market-card"
-              key={item.id || item.title}
-              style={{ cursor: 'pointer' }}
-              onClick={() => setSelectedItem(item)}
-            >
-              <div className={`market-thumb ${item.imageTone || 'indigo'}`}>
-                <BookOpen />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Pill>{item.tag}</Pill>
-                {item.verified && (
-                  <span
-                    style={{
-                      fontSize: '10px',
-                      color: '#16a34a',
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '3px',
+          filtered.map((item) => {
+            const hasImages = item.images && item.images.length > 0
+            const coverImage = hasImages ? item.images![0] : null
+            const qty = item.quantity ?? 1
+
+            return (
+              <article
+                className="market-card"
+                key={item.id || item.title}
+                style={{ cursor: 'pointer' }}
+                onClick={() => openItemDetails(item)}
+              >
+                {/* Thumbnail Image with Multi-Photo Chip & Stock Badge */}
+                <div className="market-thumb-img-wrap">
+                  {coverImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={coverImage}
+                      alt={item.title}
+                      className="market-thumb-img"
+                    />
+                  ) : (
+                    <div className={`market-thumb ${item.imageTone || 'indigo'}`} style={{ height: '100%', marginBottom: 0 }}>
+                      <BookOpen />
+                    </div>
+                  )}
+
+                  {/* Top Badges */}
+                  <div className="market-badge-stack">
+                    <span className={`market-stock-chip ${qty <= 1 ? 'low' : ''}`}>
+                      {qty <= 1 ? 'Only 1 left' : `${qty} in stock`}
+                    </span>
+                  </div>
+
+                  {/* Multi-Photo Count Badge */}
+                  {item.images && item.images.length > 1 && (
+                    <span className="market-photo-count-chip">
+                      <Camera style={{ width: 11, height: 11 }} />
+                      {item.images.length} photos
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Pill>{item.tag}</Pill>
+                  {item.verified && (
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        color: '#16a34a',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                    >
+                      <ShieldCheck style={{ width: '13px' }} /> Verified Seller
+                    </span>
+                  )}
+                </div>
+
+                <h3 style={{ fontSize: '13px', lineHeight: 1.35, minHeight: '36px', marginTop: '8px' }}>
+                  {item.title}
+                </h3>
+
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  <span>{item.seller}</span>
+                  {item.location && (
+                    <small style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', color: '#94a3b8' }}>
+                      <MapPin style={{ width: '12px' }} /> {item.location}
+                    </small>
+                  )}
+                </div>
+
+                <div className="market-card-footer" style={{ marginTop: 'auto', paddingTop: '10px' }}>
+                  <strong style={{ fontSize: '15px', color: '#0f172a' }}>{item.price}</strong>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openItemDetails(item)
                     }}
                   >
-                    <ShieldCheck style={{ width: '13px' }} /> Verified Seller
-                  </span>
-                )}
-              </div>
-
-              <h3 style={{ fontSize: '13px', lineHeight: 1.35, minHeight: '36px' }}>{item.title}</h3>
-
-              <div style={{ fontSize: '11px', color: '#64748b' }}>
-                <span>{item.seller}</span>
-                {item.location && (
-                  <small style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', color: '#94a3b8' }}>
-                    <MapPin style={{ width: '12px' }} /> {item.location}
-                  </small>
-                )}
-              </div>
-
-              <div className="market-card-footer" style={{ marginTop: 'auto', paddingTop: '10px' }}>
-                <strong style={{ fontSize: '15px', color: '#0f172a' }}>{item.price}</strong>
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setContactItem(item)
-                    setContactMessage(
-                      `Hi ${item.seller}, I saw your listing "${item.title}" on Gradia and I'm interested in getting it.`
-                    )
-                  }}
-                >
-                  Message seller <ChevronRight />
-                </button>
-              </div>
-            </article>
-          ))
+                    View details <ChevronRight />
+                  </button>
+                </div>
+              </article>
+            )
+          })
         )}
       </div>
 
@@ -381,7 +505,11 @@ export default function MarketplacePage() {
             <button
               type="button"
               className="primary-button"
-              onClick={() => setShowListModal(true)}
+              onClick={() => {
+                setUploadedImages([])
+                setListingQuantity(1)
+                setShowListModal(true)
+              }}
             >
               + List an Item
             </button>
@@ -390,109 +518,198 @@ export default function MarketplacePage() {
       )}
 
       {/* ====================================================================
-          MODAL 1: ITEM DETAIL PREVIEW MODAL
+          JUMIA-STYLE RIGHT-SIDE SHEET (DRAWER) FOR SINGLE ITEM VIEW
           ==================================================================== */}
       {selectedItem && (
         <div
-          className="modal-backdrop"
+          className="market-sheet-backdrop"
           role="presentation"
-          onMouseDown={(e) => e.target === e.currentTarget && setSelectedItem(null)}
+          onClick={(e) => e.target === e.currentTarget && setSelectedItem(null)}
         >
-          <div className="event-dialog" style={{ width: 'min(100%, 520px)' }}>
-            <div className="dialog-header">
-              <div>
-                <p className="eyebrow">{selectedItem.tag}</p>
-                <h2>{selectedItem.title}</h2>
-                <strong style={{ fontSize: '20px', color: '#4338ca', display: 'block', marginTop: '4px' }}>
-                  {selectedItem.price}
-                </strong>
+          <aside
+            className="market-sheet-drawer"
+            aria-label={`Product details: ${selectedItem.title}`}
+          >
+            {/* Sheet Sticky Header */}
+            <div className="market-sheet-header">
+              <div className="market-sheet-header-left">
+                <Pill>{selectedItem.tag}</Pill>
+                <span className="market-sheet-header-title">Item Details</span>
               </div>
               <button
                 type="button"
                 className="icon-btn"
                 onClick={() => setSelectedItem(null)}
-                aria-label="Close item details"
+                aria-label="Close product sheet"
               >
                 <X />
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div
-                style={{
-                  padding: '12px 14px',
-                  background: '#f8fafc',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border)',
-                  fontSize: '11px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Seller:</span>
-                  <strong>{selectedItem.seller}</strong>
+            {/* Sheet Scrollable Body */}
+            <div className="market-sheet-scroll-body">
+              {/* Jumia-Style Media Gallery */}
+              {selectedItem.images && selectedItem.images.length > 0 ? (
+                <div className="jumia-gallery-box">
+                  {/* Main Large Image View */}
+                  <div className="jumia-main-preview">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedItem.images[activePhotoIndex] || selectedItem.images[0]}
+                      alt={`${selectedItem.title} - view ${activePhotoIndex + 1}`}
+                    />
+                    <div className="jumia-photo-index-pill">
+                      {activePhotoIndex + 1} / {selectedItem.images.length}
+                    </div>
+                  </div>
+
+                  {/* Thumbnail "Over-Chips" Strip (Jumia-style Switcher) */}
+                  <div className="jumia-chips-strip">
+                    {selectedItem.images.map((imgUrl, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className={`jumia-thumb-chip ${idx === activePhotoIndex ? 'active' : ''}`}
+                        onClick={() => setActivePhotoIndex(idx)}
+                        aria-label={`Switch to photo ${idx + 1}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} />
+                        {idx === 0 && <span className="jumia-chip-cover-label">Cover</span>}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Condition:</span>
-                  <strong>{selectedItem.condition || 'Good Condition'}</strong>
+              ) : (
+                <div className={`market-thumb ${selectedItem.imageTone || 'indigo'}`} style={{ height: '220px', borderRadius: '12px' }}>
+                  <BookOpen style={{ width: 48, height: 48 }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Pickup Spot:</span>
-                  <strong>{selectedItem.location || 'Campus Quad'}</strong>
+              )}
+
+              {/* Price & Quantity Stock Row */}
+              <div className="jumia-price-row">
+                <div className="jumia-price-tag">{selectedItem.price}</div>
+                <span className={`market-stock-chip ${(selectedItem.quantity ?? 1) <= 1 ? 'low' : ''}`} style={{ fontSize: '11px', padding: '4px 10px' }}>
+                  {(selectedItem.quantity ?? 1) > 1
+                    ? `✓ In Stock: ${selectedItem.quantity} units available`
+                    : '⚡ Only 1 item left in stock'}
+                </span>
+              </div>
+
+              {/* Title & Pickup Location */}
+              <div>
+                <h2 style={{ fontSize: '17px', lineHeight: 1.35, margin: '0 0 8px', color: 'var(--foreground)' }}>
+                  {selectedItem.title}
+                </h2>
+                {selectedItem.location && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: '#64748b' }}>
+                    <MapPin style={{ width: 14, height: 14, color: '#6366f1' }} />
+                    <span>Campus Pickup: <strong>{selectedItem.location}</strong></span>
+                  </div>
+                )}
+              </div>
+
+              {/* Jumia-Style Specifications Grid */}
+              <div>
+                <h4 style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>
+                  Product Specifications
+                </h4>
+                <div className="jumia-spec-grid">
+                  <div className="jumia-spec-item">
+                    <span className="jumia-spec-label">Category</span>
+                    <span className="jumia-spec-value">{selectedItem.tag}</span>
+                  </div>
+                  <div className="jumia-spec-item">
+                    <span className="jumia-spec-label">Condition</span>
+                    <span className="jumia-spec-value">{selectedItem.condition || 'Verified Condition'}</span>
+                  </div>
+                  <div className="jumia-spec-item">
+                    <span className="jumia-spec-label">Quantity Available</span>
+                    <span className="jumia-spec-value">{selectedItem.quantity ?? 1} unit(s)</span>
+                  </div>
+                  <div className="jumia-spec-item">
+                    <span className="jumia-spec-label">Listed Date</span>
+                    <span className="jumia-spec-value">{selectedItem.date || 'Recently'}</span>
+                  </div>
                 </div>
               </div>
 
+              {/* Detailed Description */}
               <div>
-                <h4 style={{ margin: '0 0 4px', fontSize: '12px', fontWeight: 700 }}>Description</h4>
-                <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: 1.5 }}>
-                  {selectedItem.description || 'Available immediately for campus trade.'}
+                <h4 style={{ margin: '0 0 6px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>
+                  Description
+                </h4>
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--foreground)', background: 'var(--card)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  {selectedItem.description || 'Verified campus exchange listing ready for pickup.'}
                 </p>
               </div>
 
-              <div
-                style={{
-                  padding: '10px 12px',
-                  background: '#ecfdf5',
-                  border: '1px solid #a7f3d0',
-                  borderRadius: '8px',
-                  fontSize: '11px',
-                  color: '#065f46',
-                }}
-              >
-                <strong>Safe Campus Trade Tip:</strong> Meet in public campus locations such as your faculty quad, library foyer, or student union building.
+              {/* Seller Trust Profile Card */}
+              <div className="jumia-seller-card">
+                <div className="jumia-seller-avatar">
+                  {selectedItem.seller.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <strong style={{ fontSize: '13px', color: 'var(--foreground)' }}>{selectedItem.seller}</strong>
+                    {selectedItem.verified && (
+                      <span style={{ color: '#16a34a', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px', fontWeight: 700 }}>
+                        <ShieldCheck style={{ width: 12, height: 12 }} /> Verified
+                      </span>
+                    )}
+                  </div>
+                  <small style={{ color: '#64748b', fontSize: '11px', display: 'block', marginTop: '2px' }}>
+                    Active University Student Seller · Quick Response
+                  </small>
+                </div>
+              </div>
+
+              {/* Campus Safety Notice */}
+              <div className="jumia-safe-notice">
+                <ShieldCheck style={{ width: 18, height: 18, flexShrink: 0, marginTop: '2px', color: '#059669' }} />
+                <div>
+                  <strong>Gradia Campus Trade Safety:</strong> Meet in well-lit, public campus locations (Faculty Quad, ICT Centre, University Library). Inspect the item thoroughly before concluding payment.
+                </div>
               </div>
             </div>
 
-            <div className="dialog-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setSelectedItem(null)}
-              >
-                Close
-              </button>
+            {/* Sticky Sheet Footer Actions */}
+            <div className="market-sheet-footer">
+              {selectedItem.phone && (
+                <a
+                  href={`https://wa.me/${selectedItem.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                    `Hi ${selectedItem.seller}, I saw your listing "${selectedItem.title}" on Gradia and would like to buy it.`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="market-whatsapp-btn"
+                >
+                  <Phone style={{ width: 14, height: 14 }} />
+                  WhatsApp / Call
+                </a>
+              )}
               <button
                 type="button"
                 className="primary-button"
+                style={{ flex: 1, justifyContent: 'center' }}
                 onClick={() => {
                   setContactItem(selectedItem)
                   setContactMessage(
-                    `Hi ${selectedItem.seller}, I saw your listing "${selectedItem.title}" on Gradia and I'm interested in getting it.`
+                    `Hi ${selectedItem.seller}, I saw your listing "${selectedItem.title}" on Gradia and I am interested in purchasing it.`
                   )
                   setSelectedItem(null)
                 }}
               >
-                <MessageCircle style={{ width: '14px' }} /> Contact seller
+                <MessageCircle style={{ width: 14, height: 14 }} />
+                Message Seller
               </button>
             </div>
-          </div>
+          </aside>
         </div>
       )}
 
       {/* ====================================================================
-          MODAL 2: CONTACT SELLER MODAL
+          MODAL: CONTACT SELLER MODAL
           ==================================================================== */}
       {contactItem && (
         <div
@@ -503,7 +720,7 @@ export default function MarketplacePage() {
           <form className="event-dialog" onSubmit={handleSendInquiry}>
             <div className="dialog-header">
               <div>
-                <p className="eyebrow">Message Seller</p>
+                <p className="eyebrow">Direct Message</p>
                 <h2>Contact {contactItem.seller}</h2>
                 <p>Regarding: {contactItem.title} ({contactItem.price})</p>
               </div>
@@ -581,7 +798,7 @@ export default function MarketplacePage() {
       )}
 
       {/* ====================================================================
-          MODAL 3: LIST AN ITEM MODAL
+          MODAL: LIST AN ITEM (MULTI-IMAGE AT LEAST 2 + QUANTITY)
           ==================================================================== */}
       {showListModal && (
         <div
@@ -589,12 +806,12 @@ export default function MarketplacePage() {
           role="presentation"
           onMouseDown={(e) => e.target === e.currentTarget && setShowListModal(false)}
         >
-          <form className="event-dialog" onSubmit={handlePublish} style={{ width: 'min(100%, 540px)' }}>
+          <form className="event-dialog" onSubmit={handlePublish} style={{ width: 'min(100%, 560px)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="dialog-header">
               <div>
                 <p className="eyebrow">Campus Exchange</p>
-                <h2>List an item for sale / free share</h2>
-                <p>Post course materials, past questions, electronics, or essentials.</p>
+                <h2>List an item to sell / share</h2>
+                <p>Upload at least 2 photos and set quantity so buyers can verify details.</p>
               </div>
               <button
                 type="button"
@@ -606,20 +823,129 @@ export default function MarketplacePage() {
               </button>
             </div>
 
-            <label>
+            {/* Multi-Image Upload Area (At least 2 required) */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700 }}>
+                  Item Photos <span style={{ color: '#ef4444' }}>* (Minimum 2 photos required)</span>
+                </span>
+                {uploadedImages.length >= 2 ? (
+                  <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <Check style={{ width: 13, height: 13 }} /> {uploadedImages.length} photos ready
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '11px', color: '#e11d48', fontWeight: 600 }}>
+                    {uploadedImages.length}/2 photos added
+                  </span>
+                )}
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleImageFiles}
+              />
+
+              <div
+                className="image-upload-dropzone"
+                onClick={() => fileInputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+              >
+                <UploadCloud style={{ width: 32, height: 32, color: '#6366f1' }} />
+                <strong style={{ fontSize: '12px', color: 'var(--foreground)' }}>
+                  Click to upload item photos (Front, Back, Details)
+                </strong>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>
+                  Supports PNG, JPG, WebP. You must add at least 2 photos.
+                </span>
+              </div>
+
+              {/* Uploaded Preview Chips Grid */}
+              {uploadedImages.length > 0 && (
+                <div className="image-preview-grid">
+                  {uploadedImages.map((src, idx) => (
+                    <div className="image-preview-slot" key={idx}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt={`Upload preview ${idx + 1}`} />
+                      <button
+                        type="button"
+                        className="image-preview-remove-btn"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeUploadedImage(idx)
+                        }}
+                        aria-label={`Remove photo ${idx + 1}`}
+                      >
+                        <X style={{ width: 12, height: 12 }} />
+                      </button>
+                      <span className="image-preview-tag">
+                        {idx === 0 ? 'Cover Photo' : `Angle ${idx + 1}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Helper for quick sample photos */}
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>Or load sample student item photos:</span>
+                <button
+                  type="button"
+                  className="text-button"
+                  style={{ fontSize: '11px', color: '#4f46e5', fontWeight: 600 }}
+                  onClick={() => loadSamplePhotos('Study materials')}
+                >
+                  Load 3 Sample Photos
+                </button>
+              </div>
+            </div>
+
+            <label style={{ marginTop: '14px' }}>
               Item title
               <input
                 name="title"
                 required
-                autoFocus
-                placeholder="e.g. CSC 405 Cisco Packet Tracer Lab Manual"
+                placeholder="e.g. Casio fx-991EX ClassWiz Calculator / CSC Past Questions"
               />
             </label>
+
+            {/* Price & Quantity Grid */}
+            <div className="event-field-grid">
+              <label>
+                Price (₦ or Free)
+                <input name="price" placeholder="e.g. ₦3,500 or Free" defaultValue="₦2,500" />
+              </label>
+
+              <label>
+                Quantity Available
+                <input
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  max="999"
+                  value={listingQuantity}
+                  onChange={(e) => setListingQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  required
+                />
+              </label>
+            </div>
 
             <div className="event-field-grid">
               <label>
                 Category
-                <select name="tag" defaultValue="Study materials">
+                <select
+                  name="tag"
+                  defaultValue="Study materials"
+                  onChange={(e) => {
+                    if (uploadedImages.length === 0) {
+                      loadSamplePhotos(e.target.value)
+                    }
+                  }}
+                >
                   <option value="Study materials">Study materials</option>
                   <option value="Electronics">Electronics</option>
                   <option value="Campus essentials">Campus essentials</option>
@@ -628,34 +954,29 @@ export default function MarketplacePage() {
               </label>
 
               <label>
-                Price (₦ or Free)
-                <input name="price" placeholder="e.g. ₦3,000 or Free" defaultValue="₦2,000" />
+                Condition
+                <input name="condition" placeholder="e.g. Brand New / Gently Used" defaultValue="Gently Used" />
               </label>
             </div>
 
             <div className="event-field-grid">
               <label>
-                Condition
-                <input name="condition" placeholder="e.g. Clean PDF / Gently Used" defaultValue="Gently Used" />
-              </label>
-
-              <label>
                 Campus pickup spot
                 <input name="location" placeholder="e.g. Faculty of Science Quad" defaultValue="Faculty Quad" />
               </label>
-            </div>
 
-            <label>
-              Your contact phone / WhatsApp
-              <input name="phone" placeholder="+234 800 000 0000" defaultValue="+234 812 000 1122" />
-            </label>
+              <label>
+                Your contact WhatsApp / Phone
+                <input name="phone" placeholder="+234 800 000 0000" defaultValue="+234 812 000 1122" />
+              </label>
+            </div>
 
             <label>
               Detailed description
               <textarea
                 name="description"
                 rows={3}
-                placeholder="Describe what is included, version, condition, and handover details..."
+                placeholder="Describe condition, edition, accessories included, and pickup instructions..."
                 style={{
                   width: '100%',
                   border: '1px solid #dbe3ef',
@@ -676,8 +997,13 @@ export default function MarketplacePage() {
               >
                 Cancel
               </button>
-              <button type="submit" className="primary-button">
-                <Plus /> Publish listing
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={uploadedImages.length < 2}
+                style={{ opacity: uploadedImages.length < 2 ? 0.6 : 1 }}
+              >
+                <Plus /> Publish listing ({uploadedImages.length}/2 photos)
               </button>
             </div>
           </form>
@@ -696,3 +1022,4 @@ export default function MarketplacePage() {
     </>
   )
 }
+
