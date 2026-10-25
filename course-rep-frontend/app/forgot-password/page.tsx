@@ -70,8 +70,8 @@ export default function ForgotPasswordPage() {
 
     try {
       const res = await api.auth.resetPassword({
-        email: email.trim(),
-        code: code.trim(),
+        email: email.trim().toLowerCase(),
+        code: code.trim().replace(/\s+/g, '').replace(/-/g, ''),
         new_password: newPassword,
       })
 
