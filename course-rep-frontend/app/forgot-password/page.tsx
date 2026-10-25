@@ -19,14 +19,12 @@ export default function ForgotPasswordPage() {
   // Form states
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
 
   // Step 1: Request Password Reset Code
   const handleRequestCode = async (e: React.FormEvent) => {
@@ -40,10 +38,7 @@ export default function ForgotPasswordPage() {
     try {
       const res = await api.auth.forgotPassword(email.trim())
       setSuccessMsg(res.message || 'Verification code sent to your email.')
-      if (res.code) {
-        setGeneratedCode(res.code)
-        setCode(res.code) // Auto-populate for seamless development/testing flow
-      }
+      setCode('') // Input starts clean waiting for code from email
       setStep('verify')
     } catch (err: any) {
       setError(err?.message || 'Failed to request password reset code. Please verify your email.')
@@ -104,13 +99,6 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  const handleCopyCode = () => {
-    if (generatedCode) {
-      navigator.clipboard.writeText(generatedCode)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
 
   return (
     <main className="auth-shell">
@@ -220,46 +208,6 @@ export default function ForgotPasswordPage() {
           {/* Step 2: Verification Code & New Password Form */}
           {step === 'verify' && (
             <form onSubmit={handleResetPassword}>
-              {/* Dev/Testing Helper Badge showing generated code */}
-              {generatedCode && (
-                <div
-                  style={{
-                    padding: '10px 14px',
-                    background: 'rgba(79, 70, 229, 0.08)',
-                    border: '1px solid rgba(79, 70, 229, 0.25)',
-                    borderRadius: '8px',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>6-Digit Verification Code</span>
-                    <strong style={{ fontSize: '17px', color: '#4338ca', letterSpacing: '0.15em' }}>{generatedCode}</strong>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCopyCode}
-                    style={{
-                      border: '1px solid #c7d2fe',
-                      background: '#ffffff',
-                      color: '#4338ca',
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <Copy style={{ width: '12px', height: '12px' }} />
-                    {copied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-              )}
 
               <label>
                 6-Digit Reset Code
